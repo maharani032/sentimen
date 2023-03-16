@@ -1,6 +1,5 @@
 from cgitb import text
 from enum import auto
-from logging import error
 import threading
 from tkinter import *
 from tkinter import ttk
@@ -25,6 +24,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 
 from time import time
+# import time
 from sklearn import metrics
 import matplotlib.pyplot as plt
 import seaborn as sn
@@ -37,6 +37,8 @@ from sklearn.metrics import accuracy_score, f1_score
 
 
 def browseFiles():
+    status.set('Browser File')
+    statusLabel.update()
     filename = filedialog.askopenfilename(
         initialdir = "/",
         title = "Select a File xlsv or csv",
@@ -46,6 +48,8 @@ def browseFiles():
             )
     ) 
     try:
+        status.set('Add File')
+        statusLabel.update()
         if os.path.splitext(filename)[1].lower() == '.csv':
             data=pd.read_csv(filename)
         elif os.path.splitext(filename)[1].lower() == '.xlsx':
@@ -55,6 +59,8 @@ def browseFiles():
         fileName.set(os.path.basename(filename))        
         file_column.set(' '.join([f'{kolom}: {jumlah_per_kolom[kolom]} ' for kolom in jumlah_per_kolom.index]))
         Load_excel_data(filePath=filename)
+        status.set('Ready...')
+        statusLabel.update()
         return None
     except ValueError:
         messagebox.showerror("Information", "The file you have chosen is no data")
@@ -82,19 +88,25 @@ def Load_excel_data(filePath):
         return None
 
     clear_data()
+    # TODO: RAPIKAN TABEL
     tree["column"] = list(df.columns)
     tree["show"] = "headings"
     for column in tree["columns"]:
         tree.heading(column, text=column)
-        tree.column(column, width=40,stretch=False)
+        tree.column(column, width=50,stretch=False)
     df_rows = df.to_numpy().tolist() # turns the dataframe into a list of lists
     for row in df_rows:
         tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
-
-# scrollbar
+    # scrollbar
     hs=Scrollbar(tableFrame,orient=HORIZONTAL,command=tree.xview)
     tree.configure(xscrollcommand=hs.set)
-    hs.grid(row=0,column=1,sticky='ew')
+    hs.pack(side=BOTTOM,fill=X)
+    vs=Scrollbar(tableFrame,orient=VERTICAL,command=tree.yview)
+    tree.configure(yscrollcommand=vs.set)
+    vs.pack(side=RIGHT,fill=Y)
+    tree.pack(side=LEFT,width=200)
+
+    # hs.grid(row=0,column=1,sticky='ew')
     # hs.pack(side='BOTTOM',fill=X)
     return None
 def handle_click(event):
@@ -134,7 +146,7 @@ async def clean_tweets(tweet):
     'wow','wowwwwwah','icymi','ni','coy','coii','isenkisenk','dg','ke','ga','pdhl','aja','tadi','krn','tak',
     'aja','sbb','is','too','kuy','se','skrg','yep','aja','as','yaa','jadinya','aja','coba','tibatiba','shit','knp','jdi','udah'
     ,'sih','bang','oke','nah','bgt','km','ttg','dlm','aaa','kang','hehe','wes','you','doang','kamu','wkkw','ong','sm','he','yeee'
-    ,'emg','kak','gan','woy','dm','hi','kakk','min'
+    ,'emg','kak','gan','woy','dm','hi','kakk','min','di'
     ]
     stopword=stop_factory+more_stopword+stopwords_indonesia
     dictionary=ArrayDictionary(stopword)
@@ -153,6 +165,8 @@ async def clean_tweets(tweet):
             tweet_clean.append(stem_word)
     return  tweet_clean
 
+def tweet(tweet):
+    return "".join(tweet)
 def preprocessing(filePath,dataTweet,dataKlasifikasi):
     print(filePath, dataTweet, dataKlasifikasi)
     # validasi jika data tweet kosong dan data klasifikasi
@@ -166,25 +180,33 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
         df = pd.read_csv(excel_filename)
     else:
         df = pd.read_excel(excel_filename)
-    
+    # Check Label
+    if df[dataKlasifikasi].dtype == 'int64' or df[dataKlasifikasi].dtype == 'float64':
+        # Change Label
+        print("The 'label' column contains numerical data.")
+        label_dict = {0: 'Netral', 1: 'Positif', -1: 'Negatif'}
+        df[dataKlasifikasi] = df[dataKlasifikasi].replace(label_dict)
 
     df['remove_mention']=np.vectorize(remove_mention)(df[dataTweet]," *RT* | *@[\w]*")
     df['remove_http']=df['remove_mention'].apply(lambda x:remove_http(x))
     df['remove_hastag']=df['remove_http'].apply(lambda x:removeHastag(x))
     df['case_folding']=df['remove_hastag'].apply(lambda x:case_folding(x))
 
-    running = Label(innerFrame,text="Running steaming please do not close..",font = (16))
-    running.grid(row=5, column=0 ,pady=4)
-    running.pack()
-    root.update()
-    df['clean_tweet']= df['case_folding'].apply(lambda x:asyncio.run(clean_tweets(x)))
-    print(df['clean_tweet'])
+    # set time
+    # update_time()
+    t = time()
+    status.set('Running Stemming. Please dont close...')
+    statusLabel.update()
+    # Stemming Processing
+    df['tokenizer']= df['case_folding'].apply(lambda x:asyncio.run(clean_tweets(x)))
+    print(df['tokenizer'])
+    df['cleantweet']=df['tokenizer'].apply(lambda x:tweet(x))
+    # Munculkan Berapa Lama waktu yang dibutuhkan untuk process stemming
+    time_spent = time() - t
+    status.set('time: %0.2fs' % time_spent)
+    statusLabel.update()
 
-    # drop data ketika dikolom clean tweet kosong
-    # df.dropna(subset='clean_tweet',keep='first',inplace=True)
-    # new_df = df.dropna()
-    
-    
+    # Save File
     files = [
             ("Excel file","*.xlsx"),
             ("CSV file","*.csv")]
@@ -194,7 +216,8 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
         df.to_csv(file.name, index=False, encoding='utf-8')
     else:
         df.to_excel(file.name, index=False, encoding='utf-8')
-    running.destroy()
+    status.set('Ready to Klasifikasi')
+    statusLabel.update()
     
 
 
@@ -208,8 +231,8 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         df = pd.read_excel(excel_filename)
     running = Label(innerFrame,text="Running naive bayes please do not close..",font = (16))
     running.grid(row=5, column=0 ,pady=4)
-    running.pack()
-    root.update()
+    # running.pack()
+    innerFrame.update()
     # tdf-id
     bow_transformer = CountVectorizer().fit(df[dataClean])
     tokens = bow_transformer.get_feature_names_out()
@@ -328,30 +351,39 @@ data_clean=StringVar()
 akurasi=StringVar()
 akurasiKNN=StringVar()
 kFeatures=StringVar()
+status=StringVar()
 
 root.title('Analisis Sentimen dengan NBC dan KNN')
-root.geometry('600x800')
-root.pack_propagate(False) # tells the root to not let the widgets inside it determine its size.
-root.resizable(0, 0) # makes the root window fixed in size.
-MainFrame = Frame(root, width=500, height=500, relief='raised', borderwidth=5)
-# MainFrame.pack(expand=True, fill='both')
-innerFrame = Frame(MainFrame, borderwidth=3,width=500)
-# innerFrame.pack(fill="both", expand=True)
-tableFrame = Frame(MainFrame, borderwidth=3,width=500,height=200)
-buttonFrame= Frame(MainFrame, borderwidth=3,width=500,height=200)
+root.geometry('600x650')
+root.resizable(0, 0)
+
+# style
+
+
+# font
+my_font1=('times', 10, 'normal')
+my_fontMainLabel=('arial',11,'bold')
+
+# frame
+innerFrame = LabelFrame(root,text='Data info',font=my_fontMainLabel)
+tableFrame = Frame(root, borderwidth=3)
+buttonFrame= LabelFrame(root, text='Process',font=my_fontMainLabel,relief=FLAT)
 # tableFrame.pack(fill="both", expand=True)
 
-for frame in [MainFrame, innerFrame, tableFrame,buttonFrame]:
-    frame.pack(expand=True, fill='both')
-    frame.pack_propagate(0)
+for frame in [ innerFrame,tableFrame,buttonFrame]:
+    frame.pack(padx=10,pady=10)
+    # frame.pack(fill="both", expand=True)
 
+buttonFrame.pack(side=LEFT,padx=30,pady=10)
+# buttonFrame.grid(row=0,column=0,sticky=W,padx=10,pady=10)
+
+# Menu Bar
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
 filemenu.add_command(label="Open", command=browseFiles)
 filemenu.add_command(label="Close", command=closeapp)
 menubar.add_cascade(label="File", menu=filemenu)
-# font
-my_font1=('times', 10, 'normal')
+
 # label file
 label_f_path=Label(innerFrame,text='File path:',font=my_font1)
 label_f_path.grid(row=0, column=0,sticky='w')
@@ -380,23 +412,7 @@ label_c_tweet.grid(row=5, column=0 ,pady=4,sticky='w')
 label_k_features=Label(innerFrame,text='K:',font=my_font1)
 label_k_features.grid(row=6, column=0 ,pady=4,sticky='w')
 
-# label data klasifikasi nbc
-akurasiNB=Label(buttonFrame,text='Akurasi Naive Bayes:',font=my_font1)
-akurasiNB.grid(row=2, column=0 ,pady=4,sticky='w')
 
-# label data akurasi knn
-akurasi_knn=Label(buttonFrame,text='Akurasi KNN:',font=my_font1)
-akurasi_knn.grid(row=3, column=0 ,pady=4,sticky='w')
-
-# input akurasi data  Naive Bayes
-entry_akurasi = Entry(buttonFrame,font=my_font1,textvariable=akurasi,width=50)
-entry_akurasi.config(state= "disabled")
-entry_akurasi.grid(row=2, column=1,sticky='w',pady=4)
-
-# input akurasi data  KNN
-entry_akurasi = Entry(buttonFrame,font=my_font1,textvariable=akurasiKNN,width=50)
-entry_akurasi.config(state= "disabled")
-entry_akurasi.grid(row=3, column=1,sticky='w',pady=4)
 
 # input file path
 entry_file_path = Entry(innerFrame,font=my_font1,textvariable=filePath,width=50 )
@@ -425,9 +441,29 @@ entry_k_features.grid(row=6, column=1 ,padx=10,pady=4)
 
 # Create TreeView
 tree = ttk.Treeview(tableFrame,  selectmode="extended")
-tree.pack()
+# tree.pack(padx=20)
+# Process Frame
 
-button=Button(buttonFrame,text='preprocessing',command=lambda:threading.Thread(
+# label data klasifikasi nbc
+akurasiNB=Label(buttonFrame,text='Akurasi Naive Bayes:',font=my_font1)
+akurasiNB.grid(row=2, column=0 ,pady=4,sticky='w')
+
+# label data akurasi knn
+akurasi_knn=Label(buttonFrame,text='Akurasi KNN:',font=my_font1)
+akurasi_knn.grid(row=3, column=0 ,pady=4,sticky='w')
+
+# input akurasi data  Naive Bayes
+entry_akurasi = Entry(buttonFrame,font=my_font1,textvariable=akurasi)
+entry_akurasi.config(state= "disabled")
+entry_akurasi.grid(row=2, column=1,sticky='w',pady=4)
+
+# input akurasi data  KNN
+entry_akurasi = Entry(buttonFrame,font=my_font1,textvariable=akurasiKNN)
+entry_akurasi.config(state= "disabled")
+entry_akurasi.grid(row=3, column=1,sticky='w',pady=4)
+
+# Button Preprocessing
+button=Button(buttonFrame,text='preprocessing',bd=1,command=lambda:threading.Thread(
         target=preprocessing, args=( entry_file_path.get(),entry_c_tweet.get(),entry_c_klasifikasi.get())).start())
 button.grid(row=1,column=0)
 buttonNB=Button(buttonFrame,text='klasifikasi NBC',command=lambda:threading.Thread(
@@ -436,5 +472,11 @@ buttonNB.grid(row=1,column=1)
 buttonKNN=Button(buttonFrame,text='klasifikasi KNN',command=lambda:threading.Thread(
         target=knn, args=( entry_file_path.get(),entry_c_tweet.get(),entry_c_klasifikasi.get(),entry_c_cleanData.get(),int(entry_k_features.get()))).start())
 buttonKNN.grid(row=1,column=2)
+
+# Status
+statusLabel=Label(root,textvariable=status,bd=1,relief=FLAT,anchor=E)
+statusLabel.pack(side=BOTTOM)
+
+# root
 root.config(menu=menubar)
 root.mainloop()
