@@ -93,7 +93,7 @@ def Load_excel_data(filePath):
     tree["show"] = "headings"
     for column in tree["columns"]:
         tree.heading(column, text=column)
-        tree.column(column, width=50,stretch=False)
+        tree.column(column, width=100,stretch=False)
     df_rows = df.to_numpy().tolist() # turns the dataframe into a list of lists
     for row in df_rows:
         tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
@@ -104,7 +104,7 @@ def Load_excel_data(filePath):
     vs=Scrollbar(tableFrame,orient=VERTICAL,command=tree.yview)
     tree.configure(yscrollcommand=vs.set)
     vs.pack(side=RIGHT,fill=Y)
-    tree.pack(side=LEFT,width=200)
+    tree.pack(side=LEFT)
 
     # hs.grid(row=0,column=1,sticky='ew')
     # hs.pack(side='BOTTOM',fill=X)
