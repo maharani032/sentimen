@@ -1,4 +1,4 @@
-from cgitb import text
+# from cgitb import text
 from enum import auto
 import threading
 from tkinter import *
@@ -22,7 +22,7 @@ import asyncio
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-
+# from PIL import ImageTk,Image
 from time import time
 # import time
 from sklearn import metrics
@@ -88,7 +88,6 @@ def Load_excel_data(filePath):
         return None
 
     clear_data()
-    # TODO: RAPIKAN TABEL
     tree["column"] = list(df.columns)
     tree["show"] = "headings"
     for column in tree["columns"]:
@@ -166,7 +165,7 @@ async def clean_tweets(tweet):
     return  tweet_clean
 
 def tweet(tweet):
-    return "".join(tweet)
+    return " ".join(tweet)
 def preprocessing(filePath,dataTweet,dataKlasifikasi):
     print(filePath, dataTweet, dataKlasifikasi)
     # validasi jika data tweet kosong dan data klasifikasi
@@ -184,7 +183,10 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     if df[dataKlasifikasi].dtype == 'int64' or df[dataKlasifikasi].dtype == 'float64':
         # Change Label
         print("The 'label' column contains numerical data.")
-        label_dict = {0: 'Netral', 1: 'Positif', -1: 'Negatif'}
+        label_dict = {0: 'netral', 1: 'positif', -1: 'negatif'}
+        df[dataKlasifikasi] = df[dataKlasifikasi].replace(label_dict)
+    else:
+        label_dict = {'Netral': 'netral', 'Positif': 'positif', 'Negatif': 'negatif'}
         df[dataKlasifikasi] = df[dataKlasifikasi].replace(label_dict)
 
     df['remove_mention']=np.vectorize(remove_mention)(df[dataTweet]," *RT* | *@[\w]*")
@@ -201,6 +203,7 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     df['tokenizer']= df['case_folding'].apply(lambda x:asyncio.run(clean_tweets(x)))
     print(df['tokenizer'])
     df['cleantweet']=df['tokenizer'].apply(lambda x:tweet(x))
+    print(df['cleantweet'])
     # Munculkan Berapa Lama waktu yang dibutuhkan untuk process stemming
     time_spent = time() - t
     status.set('time: %0.2fs' % time_spent)
@@ -219,8 +222,6 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     status.set('Ready to Klasifikasi')
     statusLabel.update()
     
-
-
 def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
     if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -229,49 +230,80 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         df = pd.read_csv(excel_filename)
     else:
         df = pd.read_excel(excel_filename)
-    running = Label(innerFrame,text="Running naive bayes please do not close..",font = (16))
-    running.grid(row=5, column=0 ,pady=4)
-    # running.pack()
-    innerFrame.update()
-    # tdf-id
-    bow_transformer = CountVectorizer().fit(df[dataClean])
-    tokens = bow_transformer.get_feature_names_out()
-    text_bow = bow_transformer.transform(df[dataClean])
-    tfidf_transformer=TfidfTransformer().fit(text_bow)
-    tweet_tfidf=tfidf_transformer.transform(text_bow)
-    dd=pd.DataFrame(data=tweet_tfidf.toarray(),columns=tokens)
-    # train Naive Bayes
-    X = text_bow.toarray()
-    x_train, x_test, y_train, y_test = train_test_split(X, df[dataKlasifikasi],test_size=0.1, random_state=35)
+    status.set('Running NBC please dont close')
+    statusLabel.update()
+    try:
+        # tdf-id
+        bow_transformer = CountVectorizer().fit(df[dataClean])
+        tokens = bow_transformer.get_feature_names_out()
+        text_bow = bow_transformer.transform(df[dataClean])
+        tfidf_transformer=TfidfTransformer().fit(text_bow)
+        tweet_tfidf=tfidf_transformer.transform(text_bow)
+        dd=pd.DataFrame(data=tweet_tfidf.toarray(),columns=tokens)
+        # train Naive Bayes
+        X = text_bow.toarray()
+        x_train, x_test, y_train, y_test = train_test_split(X, df[dataKlasifikasi],test_size=0.1, random_state=35)
 
-    # x_train, x_test, y_train, y_test = train_test_split(X, df.label,test_size=0.2, random_state=35)
-    model = MultinomialNB().fit(x_train,y_train)
-    prediction = model.predict(x_test)
-    predict= pd.Series(prediction)
+        # x_train, x_test, y_train, y_test = train_test_split(X, df.label,test_size=0.2, random_state=35)
+        model = MultinomialNB().fit(x_train,y_train)
+        prediction = model.predict(x_test)
+        predict= pd.Series(prediction)
+        
+        # true_label= pd.Series(y_test)
+        # uji naive bayes
+        t = time()
+        y_pred = model.predict(x_test)
+        test_time = time() - t
+        print("test time:  %0.3fs" % test_time)
+
+        score1 = metrics.accuracy_score(y_test, y_pred)
+        print("accuracy:   %0.3f" % score1)
+        akurasi.set(score1)
+
+        print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
+        columns = ['negatif','netral','positif']
+        confm = confusion_matrix(y_test, y_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
+        df_cm = DataFrame(confm, index=columns, columns=columns)
+        plt.switch_backend('agg')
+        ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
+
+        ax.set_title('Confusion matrix')
+        ax.set_xlabel('Label prediksi')
+        ax.set_ylabel('Label sebenarnya')
+
+
+        files = [
+            ("image file","*.png")]
+        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
+        if file:
+            excel_filename = r"{}".format(file.name)
+            plt.savefig(file.name)
+            plt.close()
+        # test data
+        user_data = ["salah banget"]
+        test_1_unseen =  bow_transformer.transform(user_data)
+        data=test_1_unseen.toarray()
+        prediction_unseen = model.predict(data)
+        print(prediction_unseen)
+
+
+
+        # top1=Toplevel(width=200)
+        # top1.title('Confusion Matrix')
+        # plt.show()
+        # my_img=ImageTk.PhotoImage()
+        
+        # plt.savefig('out.png')
+
+        # status
+        status.set('Ready...')
+        statusLabel.update()
+        return None
+    except ValueError:
+        return messagebox.showerror("Information",ValueError)
     
-    # true_label= pd.Series(y_test)
-    # uji naive bayes
-    t = time()
-    y_pred = model.predict(x_test)
-    test_time = time() - t
-    print("test time:  %0.3fs" % test_time)
-
-    score1 = metrics.accuracy_score(y_test, y_pred)
-    print("accuracy:   %0.3f" % score1)
-    akurasi.set(score1)
-
-    print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
-    # # columns = ['negatif','netral','positif']
-    # # confm = confusion_matrix(y_test, y_pred)
-    # # disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=clf.classes_)
-    # # df_cm = DataFrame(confm, index=columns, columns=columns)
-    # # ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
-
-    # ax.set_title('Confusion matrix')
-    # ax.set_xlabel('Label prediksi')
-    # ax.set_ylabel('Label sebenarnya')
-    # ax.savefig("out.png") 
-    running.destroy()
+    
 
 def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2 or k is None):
@@ -282,10 +314,12 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
         df = pd.read_csv(excel_filename)
     else:
         df = pd.read_excel(excel_filename)
-    running = Label(innerFrame,text="Running naive bayes please do not close..",font = (16))
-    running.grid(row=5, column=0 ,pady=4)
-    running.pack()
-    root.update()
+    status.set('Running KNN please dont close...')
+    statusLabel.update()
+    # running = Label(innerFrame,text="Running knn please do not close..",font = (16))
+    # running.grid(row=5, column=0 ,pady=4)
+    # running.pack()
+    # root.update()
     # tdf-id
     bow_transformer = CountVectorizer().fit(df[dataClean])
     tokens = bow_transformer.get_feature_names_out()
@@ -310,6 +344,7 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     f1 = f1_score(y_test, y_pred, average='macro')
 
     akurasiKNN.set(acc)
+    print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
 
     # x_train, x_test, y_train, y_test = train_test_split(X, df.label,test_size=0.2, random_state=35)
     # model = MultinomialNB().fit(x_train,y_train)
@@ -338,7 +373,7 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     # ax.set_xlabel('Label prediksi')
     # ax.set_ylabel('Label sebenarnya')
     # ax.savefig("out.png") 
-    running.destroy()
+    # running.destroy()
 
 
 root =Tk()
