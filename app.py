@@ -32,6 +32,9 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from pandas import DataFrame
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, f1_score
+import tweepy
+from datetime import timedelta, datetime
+from dotenv import load_dotenv
 
 
 
@@ -58,6 +61,11 @@ def browseFiles():
         filePath.set(filename)
         fileName.set(os.path.basename(filename))        
         file_column.set(' '.join([f'{kolom}: {jumlah_per_kolom[kolom]} ' for kolom in jumlah_per_kolom.index]))
+        new_list_column=list(data.columns)
+        
+        entry_c_tweet.configure(values=new_list_column,state='readonly')
+        entry_c_klasifikasi.configure(values=new_list_column,state='readonly')
+        entry_c_cleanData.configure(values=new_list_column,state='readonly')
         Load_excel_data(filePath=filename)
         status.set('Ready...')
         statusLabel.update()
@@ -214,11 +222,13 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
             ("Excel file","*.xlsx"),
             ("CSV file","*.csv")]
     file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
-    excel_filename = r"{}".format(file.name)
-    if excel_filename[-4:] == ".csv":
-        df.to_csv(file.name, index=False, encoding='utf-8')
-    else:
-        df.to_excel(file.name, index=False, encoding='utf-8')
+    if(file is not None):
+
+        excel_filename = r"{}".format(file.name)
+        if excel_filename[-4:] == ".csv":
+            df.to_csv(file.name, index=False, encoding='utf-8')
+        else:
+            df.to_excel(file.name, index=False, encoding='utf-8')
     status.set('Ready to Klasifikasi')
     statusLabel.update()
     
@@ -302,9 +312,6 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         return None
     except ValueError:
         return messagebox.showerror("Information",ValueError)
-    
-    
-
 def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2 or k is None):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -345,35 +352,99 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
 
     akurasiKNN.set(acc)
     print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
+def is_numeric(char):
+    """Validasi apakah input adalah numerik"""
+    return char.isdigit()
+def crawlPopUp():
+    top= Toplevel(root)
+    top.title("Crawling Data")
+    top.geometry("500x150")
+    my_font1=('times', 10, 'normal')
 
-    # x_train, x_test, y_train, y_test = train_test_split(X, df.label,test_size=0.2, random_state=35)
-    # model = MultinomialNB().fit(x_train,y_train)
-    # prediction = model.predict(x_test)
-    # predict= pd.Series(prediction)
+
+    # label Search
+    label_search=Label(top,text='Search :',font=my_font1)
+    label_search.grid(row=0, column=0,sticky='w')
+    # entry search
+    entry_search = Entry(top,font=my_font1,textvariable=search,width=50)
+    entry_search.grid(row=0, column=1,pady=4,padx=10,sticky='w')
+
+    # label Limit
+    label_limit=Label(top,text='Limit :',font=my_font1)
+    label_limit.grid(row=1, column=0,sticky='w')
+    # entry Limit
+    entry_limit = Entry(top,font=my_font1,textvariable=limit,width=50)
+    entry_limit.grid(row=1, column=1,pady=4,padx=10,sticky='w')
+    entry_limit['validate'] = 'key'
+    entry_limit['validatecommand'] = (entry_limit.register(is_numeric), '%P')
+    # label fileType
+    label_file_type=Label(top,text='Filetype :',font=my_font1)
+    label_file_type.grid(row=2, column=0,sticky='w')
+    # entry Limit
+    list_type=['excel','csv']
+    fileTypes = ttk.Combobox(top, width = 27, values= list_type,textvariable=fileType)
+    fileTypes.grid(row=2,column=1,pady=4,padx=10,sticky='w')
+    fileTypes.configure(state='readonly')
+
+    crawling_data_button=Button(top,text='Start',command=lambda:threading.Thread(
+            target=CrawlingData, args=(entry_search.get(),entry_limit.get(),fileTypes.get())).start())
+    crawling_data_button.grid(row=3,column=0)
+
+def CrawlingData(search,limit,fileType):
+    print(limit,search,fileType)
     
-    # # true_label= pd.Series(y_test)
-    # # uji naive bayes
-    # t = time()
-    # y_pred = model.predict(x_test)
-    # test_time = time() - t
-    # print("test time:  %0.3fs" % test_time)
+    load_dotenv()
+    consumer_key = os.getenv('consumer_key')
+    consumer_secret = os.getenv('consumer_secret')
+    access_token = os.getenv('access_token')
+    access_token_secret = os.getenv('access_token_secret')
 
-    # score1 = metrics.accuracy_score(y_test, y_pred)
-    # print("accuracy:   %0.3f" % score1)
-    # akurasi.set(score1)
+    try:
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tweepy.API(auth, wait_on_rate_limit=True)
+        
+        # db_tweets = pd.DataFrame(columns=['username', 'tweetcreatedts', 'text'])
+        tweets = tweepy.Cursor(
+                    api.search_tweets, q=search, lang="id", 
+                    tweet_mode='extended').items(int(limit))
+        # tweet_list=[]
+        # tweet_list = [tweet for tweet in tweets]
+        data = {"username": [], "fulltext": [], "created_at": []}
+        for tweet in tweets:
+            data["username"].append(tweet.user.screen_name)
+            data["fulltext"].append(tweet.full_text)
+            data["created_at"].append(tweet.created_at)
+        
+        db_tweets=pd.DataFrame(data)
+        #     tweetcreatedts = tweet.created_at
+        #     try:
+        #         text = tweet.retweeted_status.full_text
+        #     except AttributeError:
+        #         text = tweet.full_text
+        #     ith_tweet = [username, tweetcreatedts, text]
+        #     db_tweets.loc[len(db_tweets)] = ith_tweet
+        
+        print('Proses Scrapping Selesai Dengan Jumlah Data', len(db_tweets))
+        files = [
+                ("Excel file","*.xlsx"),
+                ("CSV file","*.csv")]
+        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
+        if(file is not None):
+            db_tweets['created_at'] = db_tweets['created_at'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            excel_filename = r"{}".format(file.name)
+            if excel_filename[-4:] == ".csv":
+                db_tweets.to_csv(file.name, index=False, encoding='utf-8')
+            else:
+                db_tweets.to_excel(file.name, index=False, encoding='utf-8')
+    except tweepy.errors.Unauthorized as e:
+        print(e)
+    # except tweepy.TweepError as e:
+    #     print(e)
 
-    # print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
-    # # columns = ['negatif','netral','positif']
-    # # confm = confusion_matrix(y_test, y_pred)
-    # # disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=clf.classes_)
-    # # df_cm = DataFrame(confm, index=columns, columns=columns)
-    # # ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
 
-    # ax.set_title('Confusion matrix')
-    # ax.set_xlabel('Label prediksi')
-    # ax.set_ylabel('Label sebenarnya')
-    # ax.savefig("out.png") 
-    # running.destroy()
+
+
 
 
 root =Tk()
@@ -387,6 +458,11 @@ akurasi=StringVar()
 akurasiKNN=StringVar()
 kFeatures=StringVar()
 status=StringVar()
+search=StringVar()
+fileType=StringVar()
+limit=StringVar()
+list_column=[]
+
 
 root.title('Analisis Sentimen dengan NBC dan KNN')
 root.geometry('600x650')
@@ -449,6 +525,7 @@ label_k_features.grid(row=6, column=0 ,pady=4,sticky='w')
 
 
 
+
 # input file path
 entry_file_path = Entry(innerFrame,font=my_font1,textvariable=filePath,width=50 )
 entry_file_path.grid(row=0, column=1 ,padx=10,sticky='w')
@@ -461,18 +538,29 @@ entry_f_name.config(state= "disabled")
 entry_f_name = Entry(innerFrame,font=my_font1,textvariable=file_column,width=50)
 entry_f_name.grid(row=2, column=1,pady=4)
 entry_f_name.config(state= "disabled")
+    # fileTypes = ttk.Combobox(top, width = 27, values= list_type,textvariable=fileType)
+    # fileTypes.grid(row=2,column=1,pady=4,padx=10,sticky='w')
+    # fileTypes.configure(state='readonly')
 # input data tweet
-entry_c_tweet = Entry(innerFrame,font=my_font1,textvariable=data_tweet,width=50)
+entry_c_tweet =  ttk.Combobox(innerFrame,font=my_font1,textvariable=data_tweet,width=47,values=list_column)
 entry_c_tweet.grid(row=3, column=1,pady=4)
-# input data klasifikasi
-entry_c_klasifikasi = Entry(innerFrame,font=my_font1,textvariable=data_klasifikasi,width=50)
-entry_c_klasifikasi.grid(row=4, column=1,pady=4)
-# input data clean
-entry_c_cleanData = Entry(innerFrame,font=my_font1,textvariable=data_clean,width=50)
-entry_c_cleanData.grid(row=5, column=1,padx=10,pady=4)
+entry_c_tweet.configure(state='readonly')
 
+# input data klasifikasi
+entry_c_klasifikasi = ttk.Combobox(innerFrame,font=my_font1,textvariable=data_klasifikasi,width=47,values=list_column)
+entry_c_klasifikasi.grid(row=4, column=1,pady=4)
+entry_c_klasifikasi.configure(state='readonly')
+
+# input data clean
+entry_c_cleanData = ttk.Combobox(innerFrame,font=my_font1,textvariable=data_clean,width=47,values=list_column)
+entry_c_cleanData.grid(row=5, column=1,padx=10,pady=4)
+entry_c_cleanData.configure(state='readonly')
+
+# Input kFeatures
 entry_k_features= Entry(innerFrame,font=my_font1,textvariable=kFeatures,width=50)
 entry_k_features.grid(row=6, column=1 ,padx=10,pady=4)
+entry_k_features['validate'] = 'key'
+entry_k_features['validatecommand'] = (entry_k_features.register(is_numeric), '%P')
 
 # Create TreeView
 tree = ttk.Treeview(tableFrame,  selectmode="extended")
@@ -497,16 +585,20 @@ entry_akurasi = Entry(buttonFrame,font=my_font1,textvariable=akurasiKNN)
 entry_akurasi.config(state= "disabled")
 entry_akurasi.grid(row=3, column=1,sticky='w',pady=4)
 
+button_crawl_popup=Button(buttonFrame,text='Crawling Data',bd=1,command=crawlPopUp)
+button_crawl_popup.grid(row=1,column=0)
 # Button Preprocessing
 button=Button(buttonFrame,text='preprocessing',bd=1,command=lambda:threading.Thread(
         target=preprocessing, args=( entry_file_path.get(),entry_c_tweet.get(),entry_c_klasifikasi.get())).start())
-button.grid(row=1,column=0)
+button.grid(row=1,column=1)
+# Button Naive Bayes
 buttonNB=Button(buttonFrame,text='klasifikasi NBC',command=lambda:threading.Thread(
         target=naiveBayes, args=( entry_file_path.get(),entry_c_tweet.get(),entry_c_klasifikasi.get(),entry_c_cleanData.get())).start())
-buttonNB.grid(row=1,column=1)
+buttonNB.grid(row=1,column=2)
+# Button KNN
 buttonKNN=Button(buttonFrame,text='klasifikasi KNN',command=lambda:threading.Thread(
         target=knn, args=( entry_file_path.get(),entry_c_tweet.get(),entry_c_klasifikasi.get(),entry_c_cleanData.get(),int(entry_k_features.get()))).start())
-buttonKNN.grid(row=1,column=2)
+buttonKNN.grid(row=1,column=3)
 
 # Status
 statusLabel=Label(root,textvariable=status,bd=1,relief=FLAT,anchor=E)
