@@ -119,7 +119,6 @@ def Load_excel_data(filePath):
 def handle_click(event):
     if tree.identify_region(event.x, event.y) == "separator":
         return "break"
-
 def clear_data():
     tree.delete(*tree.get_children())
     return None
@@ -143,7 +142,6 @@ def removeHastag(tweet):
 def remove_http(tweet):
     tweet=" ".join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)","",tweet).split())
     return tweet
-
 async def clean_tweets(tweet):
     stop_factory = StopWordRemoverFactory().get_stop_words()
     stopwords_indonesia=stopwords.words('indonesian')
@@ -171,15 +169,14 @@ async def clean_tweets(tweet):
             stem_word=stemmer.stem(word)
             tweet_clean.append(stem_word)
     return  tweet_clean
-
 def tweet(tweet):
     return " ".join(tweet)
 def preprocessing(filePath,dataTweet,dataKlasifikasi):
     print(filePath, dataTweet, dataKlasifikasi)
     # validasi jika data tweet kosong dan data klasifikasi
-    if(len(dataTweet)<2):
+    if(len(dataTweet)<1):
         return messagebox.showerror("Information", "data tweet kosong")
-    if(len(dataKlasifikasi)<2):
+    if(len(dataKlasifikasi)<1):
         return messagebox.showerror("Information", "data klasifikasi kosong")
 
     excel_filename = r"{}".format(filePath)
@@ -196,7 +193,8 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     else:
         label_dict = {'Netral': 'netral', 'Positif': 'positif', 'Negatif': 'negatif'}
         df[dataKlasifikasi] = df[dataKlasifikasi].replace(label_dict)
-
+    if (df[dataKlasifikasi].count()!= df[dataTweet].count()):
+        return messagebox.showerror("Information", "panjang data tidak sesuai")
     df['remove_mention']=np.vectorize(remove_mention)(df[dataTweet]," *RT* | *@[\w]*")
     df['remove_http']=df['remove_mention'].apply(lambda x:remove_http(x))
     df['remove_hastag']=df['remove_http'].apply(lambda x:removeHastag(x))
@@ -231,7 +229,6 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
             df.to_excel(file.name, index=False, encoding='utf-8')
     status.set('Ready to Klasifikasi')
     statusLabel.update()
-    
 def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
     if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -356,6 +353,7 @@ def is_numeric(char):
     """Validasi apakah input adalah numerik"""
     return char.isdigit()
 def crawlPopUp():
+    global top
     top= Toplevel(root)
     top.title("Crawling Data")
     top.geometry("500x150")
@@ -389,7 +387,6 @@ def crawlPopUp():
     crawling_data_button=Button(top,text='Start',command=lambda:threading.Thread(
             target=CrawlingData, args=(entry_search.get(),entry_limit.get(),fileTypes.get())).start())
     crawling_data_button.grid(row=3,column=0)
-
 def CrawlingData(search,limit,fileType):
     print(limit,search,fileType)
     
@@ -437,10 +434,11 @@ def CrawlingData(search,limit,fileType):
                 db_tweets.to_csv(file.name, index=False, encoding='utf-8')
             else:
                 db_tweets.to_excel(file.name, index=False, encoding='utf-8')
+        top.destroy()
     except tweepy.errors.Unauthorized as e:
         print(e)
-    # except tweepy.TweepError as e:
-    #     print(e)
+        top.destroy()
+
 
 
 
