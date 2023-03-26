@@ -35,6 +35,8 @@ from sklearn.metrics import accuracy_score, f1_score
 import tweepy
 from datetime import timedelta, datetime
 from dotenv import load_dotenv
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 
 
 
@@ -76,10 +78,8 @@ def browseFiles():
     except FileNotFoundError:
         messagebox.showerror("Information", f"No such file as {fileName}")
         return None
-
 def closeapp():
     root.destroy()
-# kalau dibutuhkan tamble
 def Load_excel_data(filePath):
     try:
         excel_filename = r"{}".format(filePath)
@@ -215,13 +215,13 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     status.set('time: %0.2fs' % time_spent)
     statusLabel.update()
 
+    df.dropna(subset=['cleantweet'], inplace=True)
     # Save File
     files = [
             ("Excel file","*.xlsx"),
             ("CSV file","*.csv")]
     file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
     if(file is not None):
-
         excel_filename = r"{}".format(file.name)
         if excel_filename[-4:] == ".csv":
             df.to_csv(file.name, index=False, encoding='utf-8')
@@ -230,80 +230,129 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     status.set('Ready to Klasifikasi')
     statusLabel.update()
 def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
-    if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2):
+    if(len(dataTweet)<1 or len(dataClean)<1 or len(dataKlasifikasi)<1 or len(filePath)<1):
         return messagebox.showerror("Information", "data tweet kosong")
     excel_filename = r"{}".format(filePath)
     if excel_filename[-4:] == ".csv":
         df = pd.read_csv(excel_filename)
     else:
         df = pd.read_excel(excel_filename)
+    if (df[dataKlasifikasi].count()!= df[dataTweet].count()):
+        return messagebox.showerror("Information", "panjang data tidak sesuai")
     status.set('Running NBC please dont close')
     statusLabel.update()
     try:
         # tdf-id
+        df = df.dropna(subset=[dataKlasifikasi]).reset_index(drop=True)
+        # hitung term frequency (tf) dari data teks
         bow_transformer = CountVectorizer().fit(df[dataClean])
         tokens = bow_transformer.get_feature_names_out()
         text_bow = bow_transformer.transform(df[dataClean])
+        # hitung tf-idf dari data teks
         tfidf_transformer=TfidfTransformer().fit(text_bow)
         tweet_tfidf=tfidf_transformer.transform(text_bow)
+        # buat dataframe dari hasil tf-idf
         dd=pd.DataFrame(data=tweet_tfidf.toarray(),columns=tokens)
-        # train Naive Bayes
+        # bagi dataset menjadi data train dan data test
         X = text_bow.toarray()
-        x_train, x_test, y_train, y_test = train_test_split(X, df[dataKlasifikasi],test_size=0.1, random_state=35)
-
-        # x_train, x_test, y_train, y_test = train_test_split(X, df.label,test_size=0.2, random_state=35)
+        Y=df[dataKlasifikasi]
+        x_train, x_test, y_train, y_test = train_test_split(X, Y,test_size=0.2, random_state=35)
+        print(x_train.shape) 
+        print(x_test.shape)
+        print(y_train.shape)
+        print(y_test.shape)
+        # train model Naive Bayes
         model = MultinomialNB().fit(x_train,y_train)
-        prediction = model.predict(x_test)
-        predict= pd.Series(prediction)
-        
-        # true_label= pd.Series(y_test)
-        # uji naive bayes
-        t = time()
-        y_pred = model.predict(x_test)
-        test_time = time() - t
-        print("test time:  %0.3fs" % test_time)
+        # membuat prediksi untuk data train dan data test
+        train_prediction = model.predict(x_train)
+        test_prediction = model.predict(x_test)
+        # prediction = model.predict(x_test)
+        # predict= pd.Series(test_prediction)
 
-        score1 = metrics.accuracy_score(y_test, y_pred)
+        score1 = metrics.accuracy_score(y_test, test_prediction)
         print("accuracy:   %0.3f" % score1)
         akurasi.set(score1)
-
-        print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
         columns = ['negatif','netral','positif']
-        confm = confusion_matrix(y_test, y_pred)
+
+        # Create popup window
+        popUpNaive= Toplevel(root)
+        popUpNaive.title("Data Naive Bayes")
+        # popUpNaive.geometry("1000x400")
+        my_font1=('times', 10, 'normal')
+        # Data train
+        x_train_df = pd.DataFrame(x_train, columns=tokens)
+        x_train_df['label'] = y_train
+
+        x_train_df = x_train_df.reset_index(drop=True)
+        train_df = pd.DataFrame({'tweet': df.iloc[x_train_df.index][dataClean],
+                        'label': x_train_df['label'],
+                        'prediction': train_prediction})
+        
+        print(str(train_df['label'].count())+ "panjang data label pada train_df")
+        # create train table
+        train_label = LabelFrame(popUpNaive, text='Train Data',font=my_font1,padx=10,borderwidth=3)
+        train_label.pack(side=LEFT)
+        train_table = ttk.Treeview(train_label)
+        train_table['columns']=('tweet','label','prediction')
+        train_table['show']='headings'
+        for column in train_table['columns']:
+            train_table.heading(column, text=column)
+            train_table.column(column, width=100,stretch=False)
+        train_list = train_df.to_numpy().tolist()
+        for row in train_list:
+            train_table.insert("","end",values=row)
+        # scrollbar
+        hs=Scrollbar(train_label,orient=HORIZONTAL,command=train_table.xview)
+        train_table.configure(xscrollcommand=hs.set)
+        hs.pack(side=BOTTOM,fill='x')
+        vs=Scrollbar(train_label,orient=VERTICAL,command=train_table.yview)
+        train_table.configure(yscrollcommand=vs.set)
+        vs.pack(side=RIGHT,fill='y')
+        train_table.pack()
+        # data uji 
+        x_test_df = pd.DataFrame(x_test, columns=tokens)
+        x_test_df['label'] = y_test
+        test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
+                        'label': x_test_df['label'],
+                        'prediction': test_prediction})
+        # test table
+        test_label = LabelFrame(popUpNaive, text='Test Data',font=my_font1,padx=10,borderwidth=3)
+        test_label.pack(side=RIGHT)
+        test_table = ttk.Treeview(test_label)
+        test_table['columns']=('tweet','label','prediction')
+        test_table['show']='headings'
+        for column in test_table['columns']:
+            test_table.heading(column, text=column)
+            test_table.column(column, width=100,stretch=False)
+        test_list = test_df.to_numpy().tolist()
+        for row in test_list:
+            test_table.insert("","end",values=row)
+        # scrollbar
+        hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
+        test_table.configure(xscrollcommand=hs.set)
+        hs.pack(side=BOTTOM,fill='x')
+        vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
+        test_table.configure(yscrollcommand=vs.set)
+        vs.pack(side=RIGHT,fill='y')
+        test_table.pack()
+        
+        report = metrics.classification_report(y_test, test_prediction, target_names=['negatif', 'netral', 'positif'])
+        confm = confusion_matrix(y_test, test_prediction)
         disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
         df_cm = DataFrame(confm, index=columns, columns=columns)
         plt.switch_backend('agg')
+        fig, ax = plt.subplots()
+        fig = plt.figure(figsize=(3, 3))
         ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
 
         ax.set_title('Confusion matrix')
         ax.set_xlabel('Label prediksi')
         ax.set_ylabel('Label sebenarnya')
 
+        # Tampilkan figure di dalam canvas tkinter
+        canvas = FigureCanvasTkAgg(fig, master=popUpNaive)
+        canvas.get_tk_widget().pack()
 
-        files = [
-            ("image file","*.png")]
-        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
-        if file:
-            excel_filename = r"{}".format(file.name)
-            plt.savefig(file.name)
-            plt.close()
-        # test data
-        user_data = ["salah banget"]
-        test_1_unseen =  bow_transformer.transform(user_data)
-        data=test_1_unseen.toarray()
-        prediction_unseen = model.predict(data)
-        print(prediction_unseen)
-
-
-
-        # top1=Toplevel(width=200)
-        # top1.title('Confusion Matrix')
-        # plt.show()
-        # my_img=ImageTk.PhotoImage()
-        
-        # plt.savefig('out.png')
-
-        # status
         status.set('Ready...')
         statusLabel.update()
         return None
