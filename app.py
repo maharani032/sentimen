@@ -257,10 +257,6 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         X = text_bow.toarray()
         Y=df[dataKlasifikasi]
         x_train, x_test, y_train, y_test = train_test_split(X, Y,test_size=0.2, random_state=35)
-        print(x_train.shape) 
-        print(x_test.shape)
-        print(y_train.shape)
-        print(y_test.shape)
         # train model Naive Bayes
         model = MultinomialNB().fit(x_train,y_train)
         # membuat prediksi untuk data train dan data test
@@ -381,9 +377,8 @@ def nbc_test(inputnbc, bow_transformer, model):
     prediction_unseen = model.predict(data)
     return resultnbc.set(prediction_unseen)
 def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
-    if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2 or k is None):
+    if(len(dataTweet)<1 or len(dataClean)<1 or len(dataKlasifikasi)<1 or len(filePath)<1 or k is None):
         return messagebox.showerror("Information", "data tweet kosong")
-    print(k)
     excel_filename = r"{}".format(filePath)
     if excel_filename[-4:] == ".csv":
         df = pd.read_csv(excel_filename)
@@ -391,6 +386,7 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
         df = pd.read_excel(excel_filename)
     status.set('Running KNN please dont close...')
     statusLabel.update()
+    
     # tdf-id
     bow_transformer = CountVectorizer().fit(df[dataClean])
     tokens = bow_transformer.get_feature_names_out()
@@ -409,13 +405,111 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
 
     # # melakukan prediksi pada data testing
     y_pred = knn.predict(x_test)
+    x_pred=knn.predict(x_train)
 
     # # menghitung performa model pada data testing
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='macro')
 
     akurasiKNN.set(acc)
-    print(metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif']))
+    columns = ['negatif','netral','positif']
+    # Create popup window
+    popUpKNN= Toplevel(root)
+    #create frame
+    figureFrame=Frame(popUpKNN,borderwidth=3,relief=FLAT)
+    inputFrame=Frame(popUpKNN,borderwidth=3)
+    figureFrame.pack(padx=10)
+    inputFrame.pack(padx=10)
+    popUpKNN.title("Data KNN")
+
+    my_font1=('times', 10, 'normal')
+#     # Data train
+    x_train_df = pd.DataFrame(x_train, columns=tokens)
+    train_df = pd.DataFrame({'tweet': df.iloc[x_train_df.index][dataClean],
+                    'prediction': x_pred})
+#     # create train table
+    train_label = LabelFrame(figureFrame, text='Train Data',font=my_font1,borderwidth=3)
+    train_label.pack(side=LEFT)
+    train_table = ttk.Treeview(train_label)
+    train_table['columns']=('tweet','prediction')
+    train_table['show']='headings'
+    for column in train_table['columns']:
+        train_table.heading(column, text=column)
+        train_table.column(column, width=100,stretch=False)
+    train_list = train_df.to_numpy().tolist()
+    for row in train_list:
+        train_table.insert("","end",values=row)
+    # scrollbar
+    hs=Scrollbar(train_label,orient=HORIZONTAL,command=train_table.xview)
+    train_table.configure(xscrollcommand=hs.set)
+    hs.pack(side=BOTTOM,fill='x')
+    vs=Scrollbar(train_label,orient=VERTICAL,command=train_table.yview)
+    train_table.configure(yscrollcommand=vs.set)
+    vs.pack(side=RIGHT,fill='y')
+    train_table.pack()
+    # data uji 
+    x_test_df = pd.DataFrame(x_test, columns=tokens)
+    x_test_df['label'] = y_test
+    test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
+                    'prediction': y_pred})
+    # test table
+    test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
+    test_label.pack(side=RIGHT)
+    test_table = ttk.Treeview(test_label)
+    test_table['columns']=('tweet','prediction')
+    test_table['show']='headings'
+    for column in test_table['columns']:
+        test_table.heading(column, text=column)
+        test_table.column(column, width=100,stretch=False)
+    test_list = test_df.to_numpy().tolist()
+    for row in test_list:
+        test_table.insert("","end",values=row)
+    # scrollbar
+    hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
+    test_table.configure(xscrollcommand=hs.set)
+    hs.pack(side=BOTTOM,fill='x')
+    vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
+    test_table.configure(yscrollcommand=vs.set)
+    vs.pack(side=RIGHT,fill='y')
+    test_table.pack()
+    
+    report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
+    confm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
+    df_cm = DataFrame(confm, index=columns, columns=columns)
+    plt.switch_backend('agg')
+    fig, ax = plt.subplots()
+    fig = plt.figure(figsize=(3, 3))
+    ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
+    ax.set_title('Confusion matrix')
+    ax.set_xlabel('Label prediksi')
+    ax.set_ylabel('Label sebenarnya')
+    # Tampilkan figure di dalam canvas tkinter
+    canvas = FigureCanvasTkAgg(fig, master=figureFrame)
+    canvas.get_tk_widget().pack()
+    
+    # label input text
+    label_input_knn=Label(inputFrame,text='input text:',font=my_font1)
+    label_input_knn.grid(row=1, column=0 ,pady=4,sticky='w')
+#     # input inputnbc
+    entry_knn = Entry(inputFrame,font=my_font1,textvariable=inputknn,width=50 )
+    entry_knn.grid(row=1, column=1 ,padx=10,sticky='w')
+    knn_input_button=Button(inputFrame,text='input',command=lambda: knn_test(entry_knn.get(), bow_transformer, knn))
+    knn_input_button.grid(row=2,column=0)
+#     # label input text
+    label_result_knn=Label(inputFrame,text='hasilnya:',font=my_font1)
+    label_result_knn.grid(row=3, column=0 ,pady=4,sticky='w')
+#     # input inputnbc
+    entry_knn_result = Entry(inputFrame,font=my_font1,textvariable=resultnbc,width=50 )
+    entry_knn_result.grid(row=3, column=1 ,padx=10,sticky='w')
+    entry_knn_result.config(state= "disabled")
+def knn_test(inputknn,bow_transformer, knn):
+    if(inputknn==""):
+        return None
+    test_1_unseen =  bow_transformer.transform([inputknn])
+    data=test_1_unseen.toarray()
+    prediction_unseen = knn.predict(data)
+    return resultnbc.set(prediction_unseen)
 def is_numeric(char):
     """Validasi apakah input adalah numerik"""
     return char.isdigit()
@@ -467,13 +561,9 @@ def CrawlingData(search,limit,fileType):
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         auth.set_access_token(access_token, access_token_secret)
         api = tweepy.API(auth, wait_on_rate_limit=True)
-        
-        # db_tweets = pd.DataFrame(columns=['username', 'tweetcreatedts', 'text'])
         tweets = tweepy.Cursor(
                     api.search_tweets, q=search, lang="id", 
                     tweet_mode='extended').items(int(limit))
-        # tweet_list=[]
-        # tweet_list = [tweet for tweet in tweets]
         data = {"username": [], "fulltext": [], "created_at": []}
         for tweet in tweets:
             data["username"].append(tweet.user.screen_name)
@@ -481,13 +571,6 @@ def CrawlingData(search,limit,fileType):
             data["created_at"].append(tweet.created_at)
         
         db_tweets=pd.DataFrame(data)
-        #     tweetcreatedts = tweet.created_at
-        #     try:
-        #         text = tweet.retweeted_status.full_text
-        #     except AttributeError:
-        #         text = tweet.full_text
-        #     ith_tweet = [username, tweetcreatedts, text]
-        #     db_tweets.loc[len(db_tweets)] = ith_tweet
         
         print('Proses Scrapping Selesai Dengan Jumlah Data', len(db_tweets))
         files = [
@@ -529,7 +612,8 @@ limit=StringVar()
 list_column=[]
 inputnbc=StringVar()
 resultnbc=StringVar()
-
+inputknn=StringVar()
+resultknn=StringVar() 
 root.title('Analisis Sentimen dengan NBC dan KNN')
 root.geometry('600x650')
 root.resizable(0, 0)
@@ -604,9 +688,6 @@ entry_f_name.config(state= "disabled")
 entry_f_name = Entry(innerFrame,font=my_font1,textvariable=file_column,width=50)
 entry_f_name.grid(row=2, column=1,pady=4)
 entry_f_name.config(state= "disabled")
-    # fileTypes = ttk.Combobox(top, width = 27, values= list_type,textvariable=fileType)
-    # fileTypes.grid(row=2,column=1,pady=4,padx=10,sticky='w')
-    # fileTypes.configure(state='readonly')
 # input data tweet
 entry_c_tweet =  ttk.Combobox(innerFrame,font=my_font1,textvariable=data_tweet,width=47,values=list_column)
 entry_c_tweet.grid(row=3, column=1,pady=4)
