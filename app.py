@@ -266,8 +266,6 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         # membuat prediksi untuk data train dan data test
         train_prediction = model.predict(x_train)
         test_prediction = model.predict(x_test)
-        # prediction = model.predict(x_test)
-        # predict= pd.Series(test_prediction)
 
         score1 = metrics.accuracy_score(y_test, test_prediction)
         print("accuracy:   %0.3f" % score1)
@@ -276,24 +274,23 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
 
         # Create popup window
         popUpNaive= Toplevel(root)
+        # create frame
+        figureFrame=Frame(popUpNaive,borderwidth=3,relief=FLAT)
+        inputFrame=Frame(popUpNaive,borderwidth=3)
+        figureFrame.pack(padx=10)
+        inputFrame.pack(padx=10)
         popUpNaive.title("Data Naive Bayes")
         # popUpNaive.geometry("1000x400")
         my_font1=('times', 10, 'normal')
         # Data train
         x_train_df = pd.DataFrame(x_train, columns=tokens)
-        x_train_df['label'] = y_train
-
-        x_train_df = x_train_df.reset_index(drop=True)
         train_df = pd.DataFrame({'tweet': df.iloc[x_train_df.index][dataClean],
-                        'label': x_train_df['label'],
                         'prediction': train_prediction})
-        
-        print(str(train_df['label'].count())+ "panjang data label pada train_df")
         # create train table
-        train_label = LabelFrame(popUpNaive, text='Train Data',font=my_font1,padx=10,borderwidth=3)
+        train_label = LabelFrame(figureFrame, text='Train Data',font=my_font1,borderwidth=3)
         train_label.pack(side=LEFT)
         train_table = ttk.Treeview(train_label)
-        train_table['columns']=('tweet','label','prediction')
+        train_table['columns']=('tweet','prediction')
         train_table['show']='headings'
         for column in train_table['columns']:
             train_table.heading(column, text=column)
@@ -313,13 +310,12 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         x_test_df = pd.DataFrame(x_test, columns=tokens)
         x_test_df['label'] = y_test
         test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
-                        'label': x_test_df['label'],
                         'prediction': test_prediction})
         # test table
-        test_label = LabelFrame(popUpNaive, text='Test Data',font=my_font1,padx=10,borderwidth=3)
+        test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
         test_label.pack(side=RIGHT)
         test_table = ttk.Treeview(test_label)
-        test_table['columns']=('tweet','label','prediction')
+        test_table['columns']=('tweet','prediction')
         test_table['show']='headings'
         for column in test_table['columns']:
             test_table.heading(column, text=column)
@@ -350,14 +346,40 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         ax.set_ylabel('Label sebenarnya')
 
         # Tampilkan figure di dalam canvas tkinter
-        canvas = FigureCanvasTkAgg(fig, master=popUpNaive)
+        canvas = FigureCanvasTkAgg(fig, master=figureFrame)
         canvas.get_tk_widget().pack()
+        
+        # label input text
+        label_input_nbc=Label(inputFrame,text='input text:',font=my_font1)
+        label_input_nbc.grid(row=1, column=0 ,pady=4,sticky='w')
 
+        # input inputnbc
+        entry_nbc = Entry(inputFrame,font=my_font1,textvariable=inputnbc,width=50 )
+        entry_nbc.grid(row=1, column=1 ,padx=10,sticky='w')
+
+        nbc_input_button=Button(inputFrame,text='input',command=lambda: nbc_test(entry_nbc.get(), bow_transformer, model))
+        nbc_input_button.grid(row=2,column=0)
+
+        # label input text
+        label_result_nbc=Label(inputFrame,text='hasilnya:',font=my_font1)
+        label_result_nbc.grid(row=3, column=0 ,pady=4,sticky='w')
+
+        # input inputnbc
+        entry_nbc_result = Entry(inputFrame,font=my_font1,textvariable=resultnbc,width=50 )
+        entry_nbc_result.grid(row=3, column=1 ,padx=10,sticky='w')
+        entry_nbc_result.config(state= "disabled")
         status.set('Ready...')
         statusLabel.update()
         return None
     except ValueError:
         return messagebox.showerror("Information",ValueError)
+def nbc_test(inputnbc, bow_transformer, model):
+    if(inputnbc==""):
+        return None
+    test_1_unseen =  bow_transformer.transform([inputnbc])
+    data=test_1_unseen.toarray()
+    prediction_unseen = model.predict(data)
+    return resultnbc.set(prediction_unseen)
 def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     if(len(dataTweet)<2 or len(dataClean)<2 or len(dataKlasifikasi)<2 or len(filePath)<2 or k is None):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -369,10 +391,6 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
         df = pd.read_excel(excel_filename)
     status.set('Running KNN please dont close...')
     statusLabel.update()
-    # running = Label(innerFrame,text="Running knn please do not close..",font = (16))
-    # running.grid(row=5, column=0 ,pady=4)
-    # running.pack()
-    # root.update()
     # tdf-id
     bow_transformer = CountVectorizer().fit(df[dataClean])
     tokens = bow_transformer.get_feature_names_out()
@@ -509,7 +527,8 @@ search=StringVar()
 fileType=StringVar()
 limit=StringVar()
 list_column=[]
-
+inputnbc=StringVar()
+resultnbc=StringVar()
 
 root.title('Analisis Sentimen dengan NBC dan KNN')
 root.geometry('600x650')
