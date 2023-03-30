@@ -100,7 +100,7 @@ def Load_excel_data(filePath):
     tree["show"] = "headings"
     for column in tree["columns"]:
         tree.heading(column, text=column)
-        tree.column(column, width=100,stretch=False)
+        tree.column(column, stretch=False)
     df_rows = df.to_numpy().tolist() # turns the dataframe into a list of lists
     for row in df_rows:
         tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
@@ -146,12 +146,13 @@ async def clean_tweets(tweet):
     stop_factory = StopWordRemoverFactory().get_stop_words()
     stopwords_indonesia=stopwords.words('indonesian')
     more_stopword = [
-    'yg','dgn','utk','gw','gue','tapi','kl','deh','gua','lu','lo','kalo','trs','jd','nih','ntar','nya','lg'
-    ,'gk','dpt','dr','kpn','kok','kyk','dong','donk','yah','u','tuh','kpd','ksl','kzl','byar','si','siii','wkwk','wkwkwk','ini','mmg','jd',
-    'wow','wowwwwwah','icymi','ni','coy','coii','isenkisenk','dg','ke','ga','pdhl','aja','tadi','krn','tak',
-    'aja','sbb','is','too','kuy','se','skrg','yep','aja','as','yaa','jadinya','aja','coba','tibatiba','shit','knp','jdi','udah'
+    'yg','dgn','utk','gw','gue','deh','gua','lu','lo','kalo','trs','jd','nih','ntar','nya','lg'
+    ,'dr','kpn','kok','kyk','dong','donk','yah','tuh','si','siii','wkwk','wkwkwk','ini','mmg','jd',
+    'wow','wowwwwwah','icymi','ni','coy','coii','isenkisenk','dg','pdhl','aja','tadi','krn','tak',
+    'aja','sbb','kuy','se','skrg','yep','aja','as','yaa','jadinya','aja','coba','tibatiba','shit','knp','jdi','udah'
     ,'sih','bang','oke','nah','bgt','km','ttg','dlm','aaa','kang','hehe','wes','you','doang','kamu','wkkw','ong','sm','he','yeee'
-    ,'emg','kak','gan','woy','dm','hi','kakk','min','di'
+    ,'emg','kak','gan','woy','dm','hi','kakk','min','di','noh','gais','lah','xfxf','nak','bro','x','ahhh','gasss','hmmm','sat','set','yukkkkk'
+    ,'smh','eh','ni','laaah',' aihihi','fafifu','akwkaskaksawska '
     ]
     stopword=stop_factory+more_stopword+stopwords_indonesia
     dictionary=ArrayDictionary(stopword)
@@ -266,15 +267,16 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         score1 = metrics.accuracy_score(y_test, test_prediction)
         print("accuracy:   %0.3f" % score1)
         akurasi.set(score1)
-        columns = ['negatif','netral','positif']
 
         # Create popup window
         popUpNaive= Toplevel(root)
         # create frame
-        figureFrame=Frame(popUpNaive,borderwidth=3,relief=FLAT)
+        figureFrame=Frame(popUpNaive,borderwidth=3)
         inputFrame=Frame(popUpNaive,borderwidth=3)
-        figureFrame.pack(padx=10)
-        inputFrame.pack(padx=10)
+        bFrame=Frame(popUpNaive,borderwidth=3)
+        for frame in [ figureFrame,inputFrame,bFrame]:
+            frame.pack(padx=10,pady=10,fill='x')
+            # frame.pack(fill="both", expand=True)
         popUpNaive.title("Data Naive Bayes")
         # popUpNaive.geometry("1000x400")
         my_font1=('times', 10, 'normal')
@@ -284,13 +286,13 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
                         'prediction': train_prediction})
         # create train table
         train_label = LabelFrame(figureFrame, text='Train Data',font=my_font1,borderwidth=3)
-        train_label.pack(side=LEFT)
+        train_label.pack()
         train_table = ttk.Treeview(train_label)
         train_table['columns']=('tweet','prediction')
         train_table['show']='headings'
         for column in train_table['columns']:
             train_table.heading(column, text=column)
-            train_table.column(column, width=100,stretch=False)
+            train_table.column(column,stretch=False)
         train_list = train_df.to_numpy().tolist()
         for row in train_list:
             train_table.insert("","end",values=row)
@@ -303,72 +305,87 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         vs.pack(side=RIGHT,fill='y')
         train_table.pack()
         # data uji 
-        x_test_df = pd.DataFrame(x_test, columns=tokens)
-        x_test_df['label'] = y_test
-        test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
-                        'prediction': test_prediction})
-        # test table
-        test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
-        test_label.pack(side=RIGHT)
-        test_table = ttk.Treeview(test_label)
-        test_table['columns']=('tweet','prediction')
-        test_table['show']='headings'
-        for column in test_table['columns']:
-            test_table.heading(column, text=column)
-            test_table.column(column, width=100,stretch=False)
-        test_list = test_df.to_numpy().tolist()
-        for row in test_list:
-            test_table.insert("","end",values=row)
-        # scrollbar
-        hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
-        test_table.configure(xscrollcommand=hs.set)
-        hs.pack(side=BOTTOM,fill='x')
-        vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
-        test_table.configure(yscrollcommand=vs.set)
-        vs.pack(side=RIGHT,fill='y')
-        test_table.pack()
+        # x_test_df = pd.DataFrame(x_test, columns=tokens)
+        # x_test_df['label'] = y_test
+        # test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
+        #                 'prediction': test_prediction})
+        # # test table
+        # test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
+        # test_label.pack(side=RIGHT)
+        # test_table = ttk.Treeview(test_label)
+        # test_table['columns']=('tweet','prediction')
+        # test_table['show']='headings'
+        # for column in test_table['columns']:
+        #     test_table.heading(column, text=column)
+        #     test_table.column(column, width=100,stretch=False)
+        # test_list = test_df.to_numpy().tolist()
+        # for row in test_list:
+        #     test_table.insert("","end",values=row)
+        # # scrollbar
+        # hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
+        # test_table.configure(xscrollcommand=hs.set)
+        # hs.pack(side=BOTTOM,fill='x')
+        # vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
+        # test_table.configure(yscrollcommand=vs.set)
+        # vs.pack(side=RIGHT,fill='y')
+        # test_table.pack()
         
-        report = metrics.classification_report(y_test, test_prediction, target_names=['negatif', 'netral', 'positif'])
-        confm = confusion_matrix(y_test, test_prediction)
-        disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
-        df_cm = DataFrame(confm, index=columns, columns=columns)
-        plt.switch_backend('agg')
-        fig, ax = plt.subplots()
-        fig = plt.figure(figsize=(3, 3))
-        ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
-
-        ax.set_title('Confusion matrix')
-        ax.set_xlabel('Label prediksi')
-        ax.set_ylabel('Label sebenarnya')
-
-        # Tampilkan figure di dalam canvas tkinter
-        canvas = FigureCanvasTkAgg(fig, master=figureFrame)
-        canvas.get_tk_widget().pack()
         
         # label input text
         label_input_nbc=Label(inputFrame,text='input text:',font=my_font1)
-        label_input_nbc.grid(row=1, column=0 ,pady=4,sticky='w')
+        label_input_nbc.grid(row=1, column=0)
 
         # input inputnbc
         entry_nbc = Entry(inputFrame,font=my_font1,textvariable=inputnbc,width=50 )
         entry_nbc.grid(row=1, column=1 ,padx=10,sticky='w')
 
-        nbc_input_button=Button(inputFrame,text='input',command=lambda: nbc_test(entry_nbc.get(), bow_transformer, model))
-        nbc_input_button.grid(row=2,column=0)
-
         # label input text
         label_result_nbc=Label(inputFrame,text='hasilnya:',font=my_font1)
-        label_result_nbc.grid(row=3, column=0 ,pady=4,sticky='w')
+        label_result_nbc.grid(row=2, column=0 ,pady=4,sticky='w')
 
         # input inputnbc
         entry_nbc_result = Entry(inputFrame,font=my_font1,textvariable=resultnbc,width=50 )
-        entry_nbc_result.grid(row=3, column=1 ,padx=10,sticky='w')
+        entry_nbc_result.grid(row=2, column=1 ,padx=10,sticky='w')
         entry_nbc_result.config(state= "disabled")
+
+        nbc_input_button=Button(bFrame,text='Enter',command=lambda: nbc_test(entry_nbc.get(), bow_transformer, model))
+        nbc_input_button.grid(row=0,column=0)
+        cm_button=Button(bFrame,text='Confusion matrix',command=lambda: showConfusionMatrixCanvas(y_test,test_prediction))
+        cm_button.grid(row=1,column=0)
+        cr_button=Button(bFrame,text='Classification report',command=lambda: classification_report(y_test,test_prediction))
+        cr_button.grid(row=1,column=1)
         status.set('Ready...')
         statusLabel.update()
         return None
     except ValueError:
         return messagebox.showerror("Information",ValueError)
+def classification_report(y_test,test_prediction):
+    global classificationTop
+    classificationTop=Toplevel()
+    classificationTop.title('Classification Report')
+    text = Text(classificationTop)
+    text.pack()
+    report = metrics.classification_report(y_test, test_prediction, target_names=['negatif', 'netral', 'positif'])
+    text.config(width=60, height=10)
+    text.insert(END, report)
+def showConfusionMatrixCanvas(y_test,test_prediction):
+    global confusionTop
+    confusionTop=Toplevel()
+    confusionTop.title('Confusion Matrix')
+    columns = ['negatif','netral','positif']
+    confm = confusion_matrix(y_test, test_prediction)
+    disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
+    df_cm = DataFrame(confm, index=columns, columns=columns)
+    plt.switch_backend('agg')
+    fig, ax = plt.subplots()
+    fig = plt.figure(figsize=(3, 3))
+    ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
+    ax.set_title('Confusion matrix')
+    ax.set_xlabel('Label prediksi')
+    ax.set_ylabel('Label sebenarnya')
+    # Tampilkan figure di dalam canvas tkinter
+    canvas = FigureCanvasTkAgg(fig, master=confusionTop)
+    canvas.get_tk_widget().pack()
 def nbc_test(inputnbc, bow_transformer, model):
     if(inputnbc==""):
         return None
@@ -416,10 +433,11 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     # Create popup window
     popUpKNN= Toplevel(root)
     #create frame
-    figureFrame=Frame(popUpKNN,borderwidth=3,relief=FLAT)
+    figureFrame=Frame(popUpKNN,borderwidth=3)
     inputFrame=Frame(popUpKNN,borderwidth=3)
-    figureFrame.pack(padx=10)
-    inputFrame.pack(padx=10)
+    bFrame=Frame(popUpKNN,borderwidth=3)
+    for frame in [ figureFrame,inputFrame,bFrame]:
+        frame.pack(padx=10,pady=10,fill='x')
     popUpKNN.title("Data KNN")
 
     my_font1=('times', 10, 'normal')
@@ -448,45 +466,45 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     vs.pack(side=RIGHT,fill='y')
     train_table.pack()
     # data uji 
-    x_test_df = pd.DataFrame(x_test, columns=tokens)
-    x_test_df['label'] = y_test
-    test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
-                    'prediction': y_pred})
-    # test table
-    test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
-    test_label.pack(side=RIGHT)
-    test_table = ttk.Treeview(test_label)
-    test_table['columns']=('tweet','prediction')
-    test_table['show']='headings'
-    for column in test_table['columns']:
-        test_table.heading(column, text=column)
-        test_table.column(column, width=100,stretch=False)
-    test_list = test_df.to_numpy().tolist()
-    for row in test_list:
-        test_table.insert("","end",values=row)
-    # scrollbar
-    hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
-    test_table.configure(xscrollcommand=hs.set)
-    hs.pack(side=BOTTOM,fill='x')
-    vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
-    test_table.configure(yscrollcommand=vs.set)
-    vs.pack(side=RIGHT,fill='y')
-    test_table.pack()
+    # x_test_df = pd.DataFrame(x_test, columns=tokens)
+    # x_test_df['label'] = y_test
+    # test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
+    #                 'prediction': y_pred})
+    # # test table
+    # test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
+    # test_label.pack(side=RIGHT)
+    # test_table = ttk.Treeview(test_label)
+    # test_table['columns']=('tweet','prediction')
+    # test_table['show']='headings'
+    # for column in test_table['columns']:
+    #     test_table.heading(column, text=column)
+    #     test_table.column(column, width=100,stretch=False)
+    # test_list = test_df.to_numpy().tolist()
+    # for row in test_list:
+    #     test_table.insert("","end",values=row)
+    # # scrollbar
+    # hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
+    # test_table.configure(xscrollcommand=hs.set)
+    # hs.pack(side=BOTTOM,fill='x')
+    # vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
+    # test_table.configure(yscrollcommand=vs.set)
+    # vs.pack(side=RIGHT,fill='y')
+    # test_table.pack()
     
-    report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
-    confm = confusion_matrix(y_test, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
-    df_cm = DataFrame(confm, index=columns, columns=columns)
-    plt.switch_backend('agg')
-    fig, ax = plt.subplots()
-    fig = plt.figure(figsize=(3, 3))
-    ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
-    ax.set_title('Confusion matrix')
-    ax.set_xlabel('Label prediksi')
-    ax.set_ylabel('Label sebenarnya')
-    # Tampilkan figure di dalam canvas tkinter
-    canvas = FigureCanvasTkAgg(fig, master=figureFrame)
-    canvas.get_tk_widget().pack()
+    # report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
+    # confm = confusion_matrix(y_test, y_pred)
+    # disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
+    # df_cm = DataFrame(confm, index=columns, columns=columns)
+    # plt.switch_backend('agg')
+    # fig, ax = plt.subplots()
+    # fig = plt.figure(figsize=(3, 3))
+    # ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
+    # ax.set_title('Confusion matrix')
+    # ax.set_xlabel('Label prediksi')
+    # ax.set_ylabel('Label sebenarnya')
+    # # Tampilkan figure di dalam canvas tkinter
+    # canvas = FigureCanvasTkAgg(fig, master=figureFrame)
+    # canvas.get_tk_widget().pack()
     
     # label input text
     label_input_knn=Label(inputFrame,text='input text:',font=my_font1)
@@ -499,10 +517,16 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
 #     # label input text
     label_result_knn=Label(inputFrame,text='hasilnya:',font=my_font1)
     label_result_knn.grid(row=3, column=0 ,pady=4,sticky='w')
-#     # input inputnbc
+#     # input knn
     entry_knn_result = Entry(inputFrame,font=my_font1,textvariable=resultnbc,width=50 )
     entry_knn_result.grid(row=3, column=1 ,padx=10,sticky='w')
     entry_knn_result.config(state= "disabled")
+    knn_input_button=Button(bFrame,text='input',command=lambda: knn_test(entry_knn.get(), bow_transformer, knn))
+    knn_input_button.grid(row=2,column=0)
+    cm_button=Button(bFrame,text='Confusion matrix',command=lambda: showConfusionMatrixCanvas(y_test,y_pred))
+    cm_button.grid(row=1,column=0)
+    cr_button=Button(bFrame,text='Classification report',command=lambda: classification_report(y_test,y_pred))
+    cr_button.grid(row=1,column=1)
 def knn_test(inputknn,bow_transformer, knn):
     if(inputknn==""):
         return None
