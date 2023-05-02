@@ -111,30 +111,31 @@ class NaivePopUp(customtkinter.CTkToplevel):
         self.label_data=customtkinter.CTkLabel(self.dataframe,text="K-fold Cross Validation",font=customtkinter.CTkFont(weight='bold'))
         self.label_data.grid(row=0,column=0,padx=10,sticky='w')
 
-        self.label_akurasi = customtkinter.CTkLabel(self.dataframe, text='Akurasi dengan K-Fold Cross Validation:')
+        self.label_akurasi = customtkinter.CTkLabel(self.dataframe, text='Akurasi data latih dengan K-Fold Cross Validation:')
         self.label_akurasi.grid(row=1,column=0,padx=10,pady=4,sticky='w')
         self.emptyakurasi=customtkinter.CTkEntry(self.dataframe,textvariable=self.akurasi,width=200)
         self.emptyakurasi.grid(row=1,column=1,pady=4,padx=4,sticky='w')
         self.emptyakurasi.configure(state= "disabled")
 
-        self.label_meanaccuracy=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata akurasi k-fold:')
+        self.label_meanaccuracy=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata akurasi data latih k-fold:')
         self.label_meanaccuracy.grid(row=2,column=0,padx=10,pady=4,sticky='w')
         self.emptymean=customtkinter.CTkEntry(self.dataframe,textvariable=self.akurasimean,width=200)
         self.emptymean.grid(row=2,column=1,pady=4,padx=4,sticky='w')
         self.emptymean.configure(state= "disabled")
 
-        self.label_meanrecall=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata recall k-fold:')
+        self.label_meanrecall=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata data latih recall k-fold:')
         self.label_meanrecall.grid(row=3,column=0,padx=10,pady=4,sticky='w')
         self.emptyrecall_mean=customtkinter.CTkEntry(self.dataframe,textvariable=self.recallmean,width=200)
         self.emptyrecall_mean.grid(row=3,column=1,pady=4,padx=4,sticky='w')
         self.emptyrecall_mean.configure(state= "disabled")
         
-        self.label_mean_presisi=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata presisi k-fold:')
+        self.label_mean_presisi=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata presisi data latih dengan k-fold:')
         self.label_mean_presisi.grid(row=4,column=0,padx=10,pady=4,sticky='w')
         self.mean_presisi=customtkinter.CTkEntry(self.dataframe,textvariable=self.presisimean,width=200)
         self.mean_presisi.grid(row=4,column=1,pady=4,padx=4,sticky='w')
         self.mean_presisi.configure(state= "disabled")
 
+        # TODO: F1-MEANSURE
         self.label_wo=customtkinter.CTkLabel(self.dataframe,text="Tanpa K-fold Crossing Validation",font=customtkinter.CTkFont(weight='bold'))
         self.label_wo.grid(row=5,column=0,padx=10,sticky='w')
 
@@ -156,20 +157,11 @@ class NaivePopUp(customtkinter.CTkToplevel):
         self.nbc_presisi.grid(row=8,column=1,pady=4,padx=4,sticky='w')
         self.nbc_presisi.configure(state= "disabled")
 
-        # tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred).ravel()
-        # confusion_matrix_df = pd.DataFrame({
-        #     'Prediksi Negatif': [tn, fn],
-        #     'Prediksi Positif': [fp, tp]
-        # }, index=['Aktual Negatif', 'Aktual Positif'])
         # if jenislabel.isn
         confm = metrics.confusion_matrix(y_test, y_pred)
         # disp = metrics.ConfusionMatrixDisplay(confusion_matrix=confm)
         fig, ax = plt.subplots()
         fig = plt.figure(figsize=(4, 4))
-        # ax=sn.set(font_scale=1.4)
-        # ax=sn.heatmap(confusion_matrix_df, annot=True, annot_kws={"size": 16}, cmap="YlGnBu", fmt='g')
-
-        # plt.ylabel('Aktual', fontsize=18)
         # plt.xlabel('Prediksi', fontsize=18)
         ax = sn.heatmap(confm, cmap='Greens', annot=True)
         ax.set_title('Confusion matrix')
@@ -197,22 +189,7 @@ class NaivePopUp(customtkinter.CTkToplevel):
         vs.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=vs.set)
         self.tree.grid(row=0, column=0, sticky="nsew",padx=0,pady=0)
-        # self.text_crossval_report = customtkinter.CTkTextbox(self.dataframe,width=60,height=10)
-        # self.text_crossval_report.grid(row=5, column=0, sticky="w")
-        # self.text_crossval_report.insert("end",text=report)
 
-
-
-        # self.textbox = customtkinter.CTkTextbox(master=self.dataframe, width=100,height=100,corner_radius=0)
-        # self.textbox.grid(row=5, column=0, sticky="ew",padx=10,pady=4,columnspan=2)
-        # for i in data:
-        #     col_sum = sum(data[i])
-        #     self.textbox.insert("end",text=i+" = "+str(col_sum)+'\n')
-        # self.textboxdata=customtkinter.CTkTextbox(self.dataframe,width=200,corner_radius=10)
-        # self.textboxdata.grid(row=1, column=0, sticky="ew",padx=10,pady=4,columnspan=2)
-        # self.textboxdata.insert("end",text="Rata-rata akurasi nbc dengan cross validation :"+self.akurasimean.get()+'\n')
-        # self.textboxdata.insert("end",text="Rata-rata recall nbc: "+self.recallmean.get()+'\n')
-        # self.textboxdata.insert("end",text="Rata-rata presisi nbc: "+self.presisimean.get()+'\n')
 
 
 
