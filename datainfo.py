@@ -197,11 +197,19 @@ class DataInfoFrame(customtkinter.CTkFrame):
         return " ".join(tweet)
     
     def preprocessing(self):
+        self.button_crawling.configure(state='disabled')
+        self.button_preprocessing.configure(state='disabled')
+        self.button_naive.configure(state='disabled')
+        self.button_knn.configure(state='disabled')
         label = self.get_entry_label()
         tweet = self.get_entry_tweet()
         
         print(label)
         if(label=="" or tweet==""):
+            self.button_crawling.configure(state='normal')
+            self.button_preprocessing.configure(state='normal')
+            self.button_naive.configure(state='normal')
+            self.button_knn.configure(state='normal')
             return messagebox.showinfo("Data label atau tweet","Data label atau tweet harus diisi")
         
         excel_filename = r"{}".format(self.filepath.get())
@@ -211,6 +219,11 @@ class DataInfoFrame(customtkinter.CTkFrame):
             df = pd.read_excel(excel_filename)
         label=label.strip()
         tweet=tweet.strip()
+        self.preprocessing_pop_up=customtkinter.CTkToplevel(self)
+        self.preprocessing_pop_up.title("Do not close")
+        self.textlabel=customtkinter.CTkLabel(self.preprocessing_pop_up,text="Do not close",width=300,font=customtkinter.CTkFont(weight='bold',size=15))
+        self.textlabel.grid(row=0,column=0,sticky='nesw',padx=10,pady=10)
+        self.preprocessing_pop_up.focus()
         if df[label].dtype == 'int64' or df[label].dtype == 'float64':
         # Change Label
             print("The 'label' column contains numerical data.")
@@ -221,6 +234,10 @@ class DataInfoFrame(customtkinter.CTkFrame):
             df[label] = df[label].replace(label_dict)
 
         if (df[label].count()!= df[tweet].count()):
+            self.button_crawling.configure(state='normal')
+            self.button_preprocessing.configure(state='normal')
+            self.button_naive.configure(state='normal')
+            self.button_knn.configure(state='normal')
             return messagebox.showerror("Information", "panjang data tidak sesuai")
 
         df['remove_mention']=np.vectorize(self.remove_mention)(df[tweet]," *RT* | *@[\w]*")
@@ -232,11 +249,13 @@ class DataInfoFrame(customtkinter.CTkFrame):
         df['cleantweet']=df['tokenizer'].apply(lambda x:self.jointweet(x))
         print(df['tokenizer'])
         print(df['cleantweet'])
-        # TODO: BUAT STATUS
-        # Munculkan Berapa Lama waktu yang dibutuhkan untuk process stemming
-        # time_spent = time() - t
-        # status.set('time: %0.2fs' % time_spent)
-        # statusLabel.update()
+
+        self.button_crawling.configure(state='normal')
+        self.button_preprocessing.configure(state='normal')
+        self.button_naive.configure(state='normal')
+        self.button_knn.configure(state='normal')
+        self.preprocessing_pop_up.destroy()
+        
         df.drop_duplicates(subset='cleantweet',keep='first',inplace=True)
         df.dropna(subset='cleantweet', inplace=True)
         # Save File
@@ -278,7 +297,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
             self.knn_popup = KNNPopUp(self,cleantweet_var=self.cleantweet
                                           ,tweet_var=self.tweet,label_var=self.datalabel,
                                             filepath_var=self.filepath) # create window if its None or destroyed
-            self.knn_popup.title("Klasifikasi Naive Bayes") 
+            self.knn_popup.title(" Klasifikasi  K-Nearest Neighbors") 
         else:
             self.naive_popup.focus()
     def get_entry_label(self):
