@@ -21,13 +21,13 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.ctweet=cleantweet_var
         self.label=label_var
 
-        self.akurasi=customtkinter.StringVar()
+        self.kolomakurasi=customtkinter.StringVar()
         self.presisimean=customtkinter.StringVar()
         self.recallmean=customtkinter.StringVar()
         self.akurasimean=customtkinter.StringVar()
-        self.akurasinbc=customtkinter.StringVar()
-        self.presisinbc=customtkinter.StringVar()
-        self.recallnbc=customtkinter.StringVar()
+        self.akurasiknn=customtkinter.StringVar()
+        self.presisiknn=customtkinter.StringVar()
+        self.recallknn=customtkinter.StringVar()
 
         tweet=self.tweet.get().strip()
         clean=self.ctweet.get().strip()
@@ -61,17 +61,14 @@ class KNNPopUp(customtkinter.CTkToplevel):
         Y=df[label]
         X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y, random_state=33)
         
-        modelKNN = KNeighborsClassifier(n_neighbors=1).fit(X_train,y_train)
+        modelKNN = KNeighborsClassifier(n_neighbors=3).fit(X_train,y_train)
         scores = cross_val_score(modelKNN, X_train, y_train, cv=5,scoring='accuracy')
         precision_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='precision_weighted')
         recall_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='recall_weighted')
-        scores_df = pd.DataFrame(scores, columns=['Accuracy'])
+        
 
         y_pred=modelKNN.predict(X_test)
-        scores1=metrics.accuracy_score(y_test, y_pred)
-        # cross_val_pred = cross_val_predict(modelNB, X_train, y_train, cv=5)
-        # report = metrics.classification_report(y_train, cross_val_pred)
-        # report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
+        
         X_test_text = bow_transformer.inverse_transform(X_test)
         # konversi data X_test_text ke dalam format data frame
         X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
@@ -82,7 +79,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         datatest['label']=listarray
         datatest['prediksi']=y_pred
 
-        self.akurasi.set(str(scores.tolist()))
+        self.kolomakurasi.set(str(scores.tolist()))
         self.akurasimean.set(str(scores.mean()))
         self.recallmean.set(str(recall_scores.mean()))
         self.presisimean.set(str(precision_scores.mean()))
@@ -90,9 +87,9 @@ class KNNPopUp(customtkinter.CTkToplevel):
         # print('Accuracy:', accuracy_score(y_test, y_pred))
         # print('Precision:', precision_score(y_test, y_pred, average='weighted'))
         # print('Recall:', recall_score(y_test, y_pred, average='weighted'))
-        self.akurasinbc.set(str(metrics.accuracy_score(y_test,y_pred)))
-        self.presisinbc.set(str(metrics.precision_score(y_test,y_pred, average='weighted')))
-        self.recallnbc.set(str(metrics.recall_score(y_test,y_pred, average='weighted')))
+        self.akurasiknn.set(str(metrics.accuracy_score(y_test,y_pred)))
+        self.presisiknn.set(str(metrics.precision_score(y_test,y_pred, average='weighted')))
+        self.recallknn.set(str(metrics.recall_score(y_test,y_pred, average='weighted')))
 
         self.grid_columnconfigure(1, weight = 1)
         self.grid_rowconfigure(0, weight = 1)
@@ -101,14 +98,16 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.grafis=customtkinter.CTkFrame(self)
         self.grafis.grid(row=0,column=1,padx=10,pady=10,sticky='n')
         self.tabel=customtkinter.CTkFrame(self,width=100)
-        self.tabel.grid(row=1,column=0,padx=10,pady=10,sticky='nsew',columnspan=2)
+        self.tabel.grid(row=1,column=0,padx=10,pady=10,sticky='nsew')
+        self.confusionmatrix=customtkinter.CTkFrame(self)
+        self.confusionmatrix.grid(row=1,column=1,pady=10,padx=10,sticky='nsew')
 
         self.label_data=customtkinter.CTkLabel(self.dataframe,text="K-fold Cross Validation",font=customtkinter.CTkFont(weight='bold'))
         self.label_data.grid(row=0,column=0,padx=10,sticky='w')
 
         self.label_akurasi = customtkinter.CTkLabel(self.dataframe, text='Akurasi dengan K-Fold Cross Validation:')
         self.label_akurasi.grid(row=1,column=0,padx=10,pady=4,sticky='w')
-        self.emptyakurasi=customtkinter.CTkEntry(self.dataframe,textvariable=self.akurasi,width=200)
+        self.emptyakurasi=customtkinter.CTkEntry(self.dataframe,textvariable=self.kolomakurasi,width=200)
         self.emptyakurasi.grid(row=1,column=1,pady=4,padx=4,sticky='w')
         self.emptyakurasi.configure(state= "disabled")
 
@@ -130,24 +129,24 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.mean_presisi.grid(row=4,column=1,pady=4,padx=4,sticky='w')
         self.mean_presisi.configure(state= "disabled")
 
-        self.label_wo=customtkinter.CTkLabel(self.dataframe,text="Tanpa K-fold Crossing Validation",font=customtkinter.CTkFont(weight='bold'))
+        self.label_wo=customtkinter.CTkLabel(self.dataframe,text="Klasifikasi dengan K-Nearest Neighbors",font=customtkinter.CTkFont(weight='bold'))
         self.label_wo.grid(row=5,column=0,padx=10,sticky='w')
 
-        self.label_akurasinbc = customtkinter.CTkLabel(self.dataframe, text='Akurasi:')
+        self.label_akurasinbc = customtkinter.CTkLabel(self.dataframe, text='Akurasi dengan K-Nearest Neighbors:')
         self.label_akurasinbc.grid(row=6,column=0,padx=10,pady=4,sticky='w')
-        self.emptyakurasi_nbc=customtkinter.CTkEntry(self.dataframe,textvariable=self.akurasinbc,width=200)
+        self.emptyakurasi_nbc=customtkinter.CTkEntry(self.dataframe,textvariable=self.akurasiknn,width=200)
         self.emptyakurasi_nbc.grid(row=6,column=1,pady=4,padx=4,sticky='w')
         self.emptyakurasi_nbc.configure(state= "disabled")
 
-        self.label_nbcrecall=customtkinter.CTkLabel(self.dataframe,text='Recall:')
+        self.label_nbcrecall=customtkinter.CTkLabel(self.dataframe,text='Recall dengan K-Nearest Neighbors:')
         self.label_nbcrecall.grid(row=7,column=0,padx=10,pady=4,sticky='w')
-        self.emptyrecall_nbc=customtkinter.CTkEntry(self.dataframe,textvariable=self.recallnbc,width=200)
+        self.emptyrecall_nbc=customtkinter.CTkEntry(self.dataframe,textvariable=self.recallknn,width=200)
         self.emptyrecall_nbc.grid(row=7,column=1,pady=4,padx=4,sticky='w')
         self.emptyrecall_nbc.configure(state= "disabled")
         
-        self.label_nbc_presisi=customtkinter.CTkLabel(self.dataframe, text='Presisi:')
+        self.label_nbc_presisi=customtkinter.CTkLabel(self.dataframe, text='Presisi dengan K-Nearest Neighbors:')
         self.label_nbc_presisi.grid(row=8,column=0,padx=10,pady=4,sticky='w')
-        self.nbc_presisi=customtkinter.CTkEntry(self.dataframe,textvariable=self.presisinbc,width=200)
+        self.nbc_presisi=customtkinter.CTkEntry(self.dataframe,textvariable=self.presisiknn,width=200)
         self.nbc_presisi.grid(row=8,column=1,pady=4,padx=4,sticky='w')
         self.nbc_presisi.configure(state= "disabled")
 
@@ -181,4 +180,14 @@ class KNNPopUp(customtkinter.CTkToplevel):
         vs.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=vs.set)
         self.tree.grid(row=0, column=0, sticky="nsew",padx=0,pady=0)
+        # classificationTop.title('Classification Report')
+        self.textClassification=customtkinter.CTkLabel(self.confusionmatrix,text='Classification Report',font=customtkinter.CTkFont(weight='bold'))
+        self.textClassification.grid(row=0,column=0,padx=10,sticky='nsew')
+        text = customtkinter.CTkTextbox(self.confusionmatrix,corner_radius=5,width=300)
+        text.grid(row=1,column=0,padx=10,pady=4,sticky='nsew') 
+        # text.pack()
+        report = metrics.classification_report(y_test, y_pred)
+        text.insert("0.0", report)
+
+
 
