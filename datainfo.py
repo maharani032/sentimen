@@ -123,11 +123,11 @@ class DataInfoFrame(customtkinter.CTkFrame):
                                                           
         command=lambda:threading.Thread(target=self.preprocessing).start())
         self.button_preprocessing.grid(row=8,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
-        self.button_naive=customtkinter.CTkButton(master=self,text="Naive Bayes"
+        self.button_naive=customtkinter.CTkButton(master=self,text="Klasifikasi Naive Bayes"
                                                   ,width=100,corner_radius=10,
                                                   command=self.naivebayes)
         self.button_naive.grid(row=9,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
-        self.button_knn=customtkinter.CTkButton(master=self,text="K-Nearest"
+        self.button_knn=customtkinter.CTkButton(master=self,text="Klasifikasi K-Nearest Neighbors"
                                                 ,width=100,corner_radius=10,
                                                 command=self.knn)
         self.button_knn.grid(row=10,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
