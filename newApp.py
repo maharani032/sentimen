@@ -43,13 +43,20 @@ class App(customtkinter.CTk):
         except FileNotFoundError:
             messagebox.showerror("Information", f"No such file as {filename}")
             # return None
-    def closeapp():
-        return 0
+    def closeapp(self):
+        return self.destroy()
     def __init__(self):
         super().__init__()
 
         self.title("Analisis Sentimen")
-        self.geometry("720x480")
+
+        width= self.winfo_screenwidth()
+        height= self.winfo_screenheight()
+        #setting tkinter window size
+        self.geometry("%dx%d" % (width, height))
+        # self.geometry("720x480")
+        # window.attributes('-fullscreen', True)
+
         # self.grid_rowconfigure(1, weight=1)
         # self.columnconfigure(2, weight=1)
         self.filename = customtkinter.StringVar()
