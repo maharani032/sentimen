@@ -1,4 +1,4 @@
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import customtkinter
 import pandas as pd
 from sklearn import metrics
@@ -72,7 +72,15 @@ class KNNPopUp(customtkinter.CTkToplevel):
         # cross_val_pred = cross_val_predict(modelNB, X_train, y_train, cv=5)
         # report = metrics.classification_report(y_train, cross_val_pred)
         # report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
+        X_test_text = bow_transformer.inverse_transform(X_test)
+        # konversi data X_test_text ke dalam format data frame
+        X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
 
+        datatest=pd.DataFrame()
+        datatest['tweet']=X_test_df['clean tweet']
+        listarray=y_test.tolist()
+        datatest['label']=listarray
+        datatest['prediksi']=y_pred
 
         self.akurasi.set(str(scores.tolist()))
         self.akurasimean.set(str(scores.mean()))
@@ -92,6 +100,8 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.dataframe.grid(row=0,column=0,padx=10,pady=10,sticky='n')
         self.grafis=customtkinter.CTkFrame(self)
         self.grafis.grid(row=0,column=1,padx=10,pady=10,sticky='n')
+        self.tabel=customtkinter.CTkFrame(self,width=100)
+        self.tabel.grid(row=1,column=0,padx=10,pady=10,sticky='nsew',columnspan=2)
 
         self.label_data=customtkinter.CTkLabel(self.dataframe,text="K-fold Cross Validation",font=customtkinter.CTkFont(weight='bold'))
         self.label_data.grid(row=0,column=0,padx=10,sticky='w')
@@ -141,21 +151,10 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.nbc_presisi.grid(row=8,column=1,pady=4,padx=4,sticky='w')
         self.nbc_presisi.configure(state= "disabled")
 
-        # tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred).ravel()
-        # confusion_matrix_df = pd.DataFrame({
-        #     'Prediksi Negatif': [tn, fn],
-        #     'Prediksi Positif': [fp, tp]
-        # }, index=['Aktual Negatif', 'Aktual Positif'])
-        # if jenislabel.isn
         confm = metrics.confusion_matrix(y_test, y_pred)
-        # disp = metrics.ConfusionMatrixDisplay(confusion_matrix=confm)
+        
         fig, ax = plt.subplots()
         fig = plt.figure(figsize=(4, 4))
-        # ax=sn.set(font_scale=1.4)
-        # ax=sn.heatmap(confusion_matrix_df, annot=True, annot_kws={"size": 16}, cmap="YlGnBu", fmt='g')
-
-        # plt.ylabel('Aktual', fontsize=18)
-        # plt.xlabel('Prediksi', fontsize=18)
         ax = sn.heatmap(confm, cmap='Greens', annot=True)
         ax.set_title('Confusion matrix')
         ax.set_xlabel('Label prediksi')
@@ -163,4 +162,23 @@ class KNNPopUp(customtkinter.CTkToplevel):
 
         canvas=FigureCanvasTkAgg(fig,self.grafis)
         canvas.get_tk_widget().grid(row=0,column=0,padx=10)
+
+        self.tree=ttk.Treeview(self.tabel,selectmode='extended')
+        self.tree["column"] = list(datatest.columns)
+        # self.tree["show"] = "headings"
+        for column in self.tree["columns"]:
+            self.tree.heading(column, text=column,anchor='w')
+            self.tree.column(column,anchor='w',width=100,stretch=False)
+
+        df_rows = datatest.to_numpy().tolist() # turns the dataframe into a list of lists
+        for row in df_rows:
+            self.tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
+        hs=ttk.Scrollbar(self.tabel, orient="horizontal", command=self.tree.xview)
+        hs.grid(row=1, column=0, sticky="ew")
+        self.tree.configure(xscrollcommand=hs.set)
+        ttk.Style().configure("TreeviewItem", rowheight = 50, font = (None, 50))
+        vs=ttk.Scrollbar(self.tabel, orient="vertical", command=self.tree.yview)
+        vs.grid(row=0, column=1, sticky="ns")
+        self.tree.configure(yscrollcommand=vs.set)
+        self.tree.grid(row=0, column=0, sticky="nsew",padx=0,pady=0)
 
