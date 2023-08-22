@@ -59,9 +59,9 @@ class KNNPopUp(customtkinter.CTkToplevel):
         print(jenislabel)
         X = text_bow.toarray()
         Y=df[label]
-        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y, random_state=33)
+        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y, random_state=30)
         
-        modelKNN = KNeighborsClassifier(n_neighbors=3).fit(X_train,y_train)
+        modelKNN = KNeighborsClassifier(n_neighbors=5).fit(X_train,y_train)
         scores = cross_val_score(modelKNN, X_train, y_train, cv=5,scoring='accuracy')
         precision_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='precision_weighted')
         recall_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='recall_weighted')
