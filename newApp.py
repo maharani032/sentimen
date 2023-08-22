@@ -90,12 +90,7 @@ class App(customtkinter.CTk):
 
         self.data_tabel=tableFrame(master=self,header_name="Data",filepath_var=self.filepath)
         self.data_tabel.grid(row=0,column=1,padx=10,pady=10,sticky='NSEW')
-
         
-        
-
-    
-        return
 if __name__ == "__main__":
     app = App()
     app.mainloop()

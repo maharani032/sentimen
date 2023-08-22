@@ -299,7 +299,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
                                             filepath_var=self.filepath) # create window if its None or destroyed
             self.knn_popup.title(" Klasifikasi  K-Nearest Neighbors") 
         else:
-            self.naive_popup.focus()
+            self.knn_popup.focus()
     def get_entry_label(self):
         return self.datalabel.get()
     def get_entry_tweet(self):
