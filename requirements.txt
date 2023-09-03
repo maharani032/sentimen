@@ -7,4 +7,5 @@ matplotlib
 numpy
 sastrawi
 python-dotenv
+tweepy
 pyinstaller>=4.3
