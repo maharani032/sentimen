@@ -9,3 +9,4 @@ sastrawi
 python-dotenv
 tweepy
 pyinstaller>=4.3
+nltk
