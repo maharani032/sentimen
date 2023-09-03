@@ -3,3 +3,4 @@ tkinter
 customtkinter
 sklearn
 sastrawi
+pyinstaller>=4.3
