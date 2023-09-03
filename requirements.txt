@@ -6,4 +6,5 @@ seaborn
 matplotlib
 numpy
 sastrawi
+dotenv
 pyinstaller>=4.3
