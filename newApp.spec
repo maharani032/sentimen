@@ -22,7 +22,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          [],
+          [('v', None, 'OPTION')],  # Add this right here
           name='newApp',
           debug=False,
           bootloader_ignore_signals=False,
