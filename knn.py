@@ -14,12 +14,13 @@ from sklearn.neighbors import KNeighborsClassifier
 
 
 class KNNPopUp(customtkinter.CTkToplevel):
-    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None,label_var=None):
+    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None,label_var=None, k_var=None):
         super().__init__(master)
         self.filepath=filepath_var
         self.tweet=tweet_var
         self.ctweet=cleantweet_var
         self.label=label_var
+        self.k=k_var
 
         self.kolomakurasi=customtkinter.StringVar()
         self.presisimean=customtkinter.StringVar()
@@ -28,7 +29,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.akurasiknn=customtkinter.StringVar()
         self.presisiknn=customtkinter.StringVar()
         self.recallknn=customtkinter.StringVar()
-
+        k=self.k.get().strip()
         tweet=self.tweet.get().strip()
         clean=self.ctweet.get().strip()
         label=self.label.get().strip()
@@ -61,7 +62,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         Y=df[label]
         X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y, random_state=30)
         
-        modelKNN = KNeighborsClassifier(n_neighbors=5).fit(X_train,y_train)
+        modelKNN = KNeighborsClassifier(n_neighbors=int(k)).fit(X_train,y_train)
         scores = cross_val_score(modelKNN, X_train, y_train, cv=5,scoring='accuracy')
         precision_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='precision_weighted')
         recall_scores = cross_val_score(modelKNN, X_train, y_train, cv=5, scoring='recall_weighted')
