@@ -1,6 +1,9 @@
 pandas
-tkinter
+tk
 customtkinter
-sklearn
+scikit-learn
+seaborn
+matplotlib
+numpy
 sastrawi
 pyinstaller>=4.3
