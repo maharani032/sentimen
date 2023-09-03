@@ -6,7 +6,7 @@ block_cipher = None
 
 a = Analysis(['newApp.py'],
              binaries=[],
-             datas=[],
+             datas=[('C:/Users/Mahar/Downloads/*.*', 'Downloads/')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -30,4 +30,4 @@ exe = EXE(pyz,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
-          console=False , icon='google.ico')
+          console=True , icon='google.ico')
