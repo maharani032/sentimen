@@ -38,9 +38,6 @@ from dotenv import load_dotenv
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-
-
-
 def browseFiles():
     status.set('Browser File')
     statusLabel.update()
@@ -122,6 +119,8 @@ def handle_click(event):
 def clear_data():
     tree.delete(*tree.get_children())
     return None
+
+#  Preprocessing
 def case_folding(tweet):
     return tweet.lower()
 def remove_mention(tweet,pattern_regex):
@@ -172,6 +171,7 @@ async def clean_tweets(tweet):
     return  tweet_clean
 def tweet(tweet):
     return " ".join(tweet)
+
 def preprocessing(filePath,dataTweet,dataKlasifikasi):
     print(filePath, dataTweet, dataKlasifikasi)
     # validasi jika data tweet kosong dan data klasifikasi
@@ -196,6 +196,7 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
         df[dataKlasifikasi] = df[dataKlasifikasi].replace(label_dict)
     if (df[dataKlasifikasi].count()!= df[dataTweet].count()):
         return messagebox.showerror("Information", "panjang data tidak sesuai")
+    
     df['remove_mention']=np.vectorize(remove_mention)(df[dataTweet]," *RT* | *@[\w]*")
     df['remove_http']=df['remove_mention'].apply(lambda x:remove_http(x))
     df['remove_hastag']=df['remove_http'].apply(lambda x:removeHastag(x))
@@ -225,11 +226,12 @@ def preprocessing(filePath,dataTweet,dataKlasifikasi):
     if(file is not None):
         excel_filename = r"{}".format(file.name)
         if excel_filename[-4:] == ".csv":
-            df.to_csv(file.name, index=False, encoding='utf-8')
+            df.to_csv(file.name, index=False)
         else:
-            df.to_excel(file.name, index=False, encoding='utf-8')
+            df.to_excel(file.name, index=False)
     status.set('Ready to Klasifikasi')
     statusLabel.update()
+
 def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
     if(len(dataTweet)<1 or len(dataClean)<1 or len(dataKlasifikasi)<1 or len(filePath)<1):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -275,7 +277,7 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         inputFrame=Frame(popUpNaive,borderwidth=3)
         bFrame=Frame(popUpNaive,borderwidth=3)
         for frame in [ figureFrame,inputFrame,bFrame]:
-            frame.pack(padx=10,pady=10,fill='x')
+            frame.pack(padx=10,pady=5,fill='x')
             # frame.pack(fill="both", expand=True)
         popUpNaive.title("Data Naive Bayes")
         # popUpNaive.geometry("1000x400")
@@ -304,46 +306,17 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         train_table.configure(yscrollcommand=vs.set)
         vs.pack(side=RIGHT,fill='y')
         train_table.pack()
-        # data uji 
-        # x_test_df = pd.DataFrame(x_test, columns=tokens)
-        # x_test_df['label'] = y_test
-        # test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
-        #                 'prediction': test_prediction})
-        # # test table
-        # test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
-        # test_label.pack(side=RIGHT)
-        # test_table = ttk.Treeview(test_label)
-        # test_table['columns']=('tweet','prediction')
-        # test_table['show']='headings'
-        # for column in test_table['columns']:
-        #     test_table.heading(column, text=column)
-        #     test_table.column(column, width=100,stretch=False)
-        # test_list = test_df.to_numpy().tolist()
-        # for row in test_list:
-        #     test_table.insert("","end",values=row)
-        # # scrollbar
-        # hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
-        # test_table.configure(xscrollcommand=hs.set)
-        # hs.pack(side=BOTTOM,fill='x')
-        # vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
-        # test_table.configure(yscrollcommand=vs.set)
-        # vs.pack(side=RIGHT,fill='y')
-        # test_table.pack()
         
-        
-        # label input text
+
         label_input_nbc=Label(inputFrame,text='input text:',font=my_font1)
         label_input_nbc.grid(row=1, column=0)
 
-        # input inputnbc
         entry_nbc = Entry(inputFrame,font=my_font1,textvariable=inputnbc,width=50 )
         entry_nbc.grid(row=1, column=1 ,padx=10,sticky='w')
 
-        # label input text
         label_result_nbc=Label(inputFrame,text='hasilnya:',font=my_font1)
         label_result_nbc.grid(row=2, column=0 ,pady=4,sticky='w')
 
-        # input inputnbc
         entry_nbc_result = Entry(inputFrame,font=my_font1,textvariable=resultnbc,width=50 )
         entry_nbc_result.grid(row=2, column=1 ,padx=10,sticky='w')
         entry_nbc_result.config(state= "disabled")
@@ -359,6 +332,7 @@ def naiveBayes(filePath,dataTweet,dataKlasifikasi,dataClean):
         return None
     except ValueError:
         return messagebox.showerror("Information",ValueError)
+
 def classification_report(y_test,test_prediction):
     global classificationTop
     classificationTop=Toplevel()
@@ -368,6 +342,7 @@ def classification_report(y_test,test_prediction):
     report = metrics.classification_report(y_test, test_prediction, target_names=['negatif', 'netral', 'positif'])
     text.config(width=60, height=10)
     text.insert(END, report)
+
 def showConfusionMatrixCanvas(y_test,test_prediction):
     global confusionTop
     confusionTop=Toplevel()
@@ -386,6 +361,7 @@ def showConfusionMatrixCanvas(y_test,test_prediction):
     # Tampilkan figure di dalam canvas tkinter
     canvas = FigureCanvasTkAgg(fig, master=confusionTop)
     canvas.get_tk_widget().pack()
+
 def nbc_test(inputnbc, bow_transformer, model):
     if(inputnbc==""):
         return None
@@ -393,6 +369,7 @@ def nbc_test(inputnbc, bow_transformer, model):
     data=test_1_unseen.toarray()
     prediction_unseen = model.predict(data)
     return resultnbc.set(prediction_unseen)
+
 def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     if(len(dataTweet)<1 or len(dataClean)<1 or len(dataKlasifikasi)<1 or len(filePath)<1 or k is None):
         return messagebox.showerror("Information", "data tweet kosong")
@@ -465,46 +442,6 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     train_table.configure(yscrollcommand=vs.set)
     vs.pack(side=RIGHT,fill='y')
     train_table.pack()
-    # data uji 
-    # x_test_df = pd.DataFrame(x_test, columns=tokens)
-    # x_test_df['label'] = y_test
-    # test_df = pd.DataFrame({'tweet': df.iloc[x_test_df.index][dataClean],
-    #                 'prediction': y_pred})
-    # # test table
-    # test_label = LabelFrame(figureFrame, text='Test Data',font=my_font1,borderwidth=3)
-    # test_label.pack(side=RIGHT)
-    # test_table = ttk.Treeview(test_label)
-    # test_table['columns']=('tweet','prediction')
-    # test_table['show']='headings'
-    # for column in test_table['columns']:
-    #     test_table.heading(column, text=column)
-    #     test_table.column(column, width=100,stretch=False)
-    # test_list = test_df.to_numpy().tolist()
-    # for row in test_list:
-    #     test_table.insert("","end",values=row)
-    # # scrollbar
-    # hs=Scrollbar(test_label,orient=HORIZONTAL,command=test_table.xview)
-    # test_table.configure(xscrollcommand=hs.set)
-    # hs.pack(side=BOTTOM,fill='x')
-    # vs=Scrollbar(test_label,orient=VERTICAL,command=test_table.yview)
-    # test_table.configure(yscrollcommand=vs.set)
-    # vs.pack(side=RIGHT,fill='y')
-    # test_table.pack()
-    
-    # report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
-    # confm = confusion_matrix(y_test, y_pred)
-    # disp = ConfusionMatrixDisplay(confusion_matrix=confm,  display_labels=columns)
-    # df_cm = DataFrame(confm, index=columns, columns=columns)
-    # plt.switch_backend('agg')
-    # fig, ax = plt.subplots()
-    # fig = plt.figure(figsize=(3, 3))
-    # ax = sn.heatmap(df_cm, cmap='Greens', annot=True)
-    # ax.set_title('Confusion matrix')
-    # ax.set_xlabel('Label prediksi')
-    # ax.set_ylabel('Label sebenarnya')
-    # # Tampilkan figure di dalam canvas tkinter
-    # canvas = FigureCanvasTkAgg(fig, master=figureFrame)
-    # canvas.get_tk_widget().pack()
     
     # label input text
     label_input_knn=Label(inputFrame,text='input text:',font=my_font1)
@@ -527,6 +464,7 @@ def knn(filePath,dataTweet,dataKlasifikasi,dataClean,k):
     cm_button.grid(row=1,column=0)
     cr_button=Button(bFrame,text='Classification report',command=lambda: classification_report(y_test,y_pred))
     cr_button.grid(row=1,column=1)
+
 def knn_test(inputknn,bow_transformer, knn):
     if(inputknn==""):
         return None
@@ -534,9 +472,12 @@ def knn_test(inputknn,bow_transformer, knn):
     data=test_1_unseen.toarray()
     prediction_unseen = knn.predict(data)
     return resultnbc.set(prediction_unseen)
+
 def is_numeric(char):
     """Validasi apakah input adalah numerik"""
     return char.isdigit()
+
+# Crawling Data
 def crawlPopUp():
     global top
     top= Toplevel(root)
@@ -572,9 +513,9 @@ def crawlPopUp():
     crawling_data_button=Button(top,text='Start',command=lambda:threading.Thread(
             target=CrawlingData, args=(entry_search.get(),entry_limit.get(),fileTypes.get())).start())
     crawling_data_button.grid(row=3,column=0)
+
 def CrawlingData(search,limit,fileType):
-    print(limit,search,fileType)
-    
+    print(limit,search,fileType)    
     load_dotenv()
     consumer_key = os.getenv('consumer_key')
     consumer_secret = os.getenv('consumer_secret')
@@ -605,18 +546,13 @@ def CrawlingData(search,limit,fileType):
             db_tweets['created_at'] = db_tweets['created_at'].dt.strftime('%Y-%m-%d %H:%M:%S')
             excel_filename = r"{}".format(file.name)
             if excel_filename[-4:] == ".csv":
-                db_tweets.to_csv(file.name, index=False, encoding='utf-8')
+                db_tweets.to_csv(file.name, index=False)
             else:
-                db_tweets.to_excel(file.name, index=False, encoding='utf-8')
+                db_tweets.to_excel(file.name, index=False)
         top.destroy()
     except tweepy.errors.Unauthorized as e:
         print(e)
         top.destroy()
-
-
-
-
-
 
 
 root =Tk()
@@ -638,6 +574,8 @@ inputnbc=StringVar()
 resultnbc=StringVar()
 inputknn=StringVar()
 resultknn=StringVar() 
+
+
 root.title('Analisis Sentimen dengan NBC dan KNN')
 root.geometry('600x650')
 root.resizable(0, 0)
