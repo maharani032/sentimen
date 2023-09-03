@@ -6,8 +6,8 @@ block_cipher = None
 
 a = Analysis(['newApp.py'],
              binaries=[],
-             datas=[('C:/Users/Mahar/Downloads/*.*', 'Downloads/')],
-             hiddenimports=[],
+             datas=[],
+             hiddenimports=['filedialog',],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
