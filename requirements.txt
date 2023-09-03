@@ -1,0 +1,9 @@
+pandas
+tk
+customtkinter
+scikit-learn
+seaborn
+matplotlib
+numpy
+sastrawi
+pyinstaller>=4.3
