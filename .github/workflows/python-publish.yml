@@ -32,7 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
-          tag_name: 'Application'
+          tag_name: 'v1.0.0'
           release_name: "New App"
           overwrite: true
           body: |
