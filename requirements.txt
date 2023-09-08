@@ -10,6 +10,5 @@ tweepy
 pyinstaller>=4.3
 nltk
 openpyxl
-Sastrawi
 xlrd
 PySastrawi
