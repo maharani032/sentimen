@@ -13,7 +13,6 @@ from table import tableFrame
 
 
 class App(customtkinter.CTk):
-    
     def browseFiles(self):
         filename = filedialog.askopenfilename(
             initialdir = "/",
