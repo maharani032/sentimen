@@ -16,6 +16,7 @@ import numpy as np
 from naive import NaivePopUp
 from knn import KNNPopUp
 from crawling import CrawlingFrame
+import nltk
 
 
 
@@ -44,7 +45,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
     def __init__(self, master,header_name="Data Info",filename_var=None,k_var=None, listcolumn_var=None,filepath_var=None, datafile_var=None, **kwargs):
         super().__init__(master, **kwargs)
         self.header_name = header_name
-
+        nltk.download('stopwords')
         # frame
         self.button_frame = customtkinter.CTkFrame(self)
         self.data=customtkinter.CTkFrame(self)
@@ -175,7 +176,9 @@ class DataInfoFrame(customtkinter.CTkFrame):
     
     async def clean_tweets(self,tweet):
         stop_factory = StopWordRemoverFactory().get_stop_words()
-        stopwords_indonesia=stopwords.words('indonesian')
+        stopwords_indonesia=nltk.corpus.stopwords.words('indonesian')
+        
+        # stopwords_indonesia=stopwords.words('indonesian')
         more_stopword = [
         'yg','dgn','kan','huh','bruh','xd','xf','hahaha','nya','wkwkwkkwkwk','akwkaskaksawska','wkwkw','wkwkkwwkk'
         'kok','kyk','dong','donk','yah','tuh','si','siii','wkwk','wkwkwk','ini','tp','utk','sj','pd','gw','gua','gwe',
