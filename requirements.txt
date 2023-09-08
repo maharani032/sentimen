@@ -12,3 +12,4 @@ nltk
 openpyxl
 Sastrawi
 xlrd
+PySastrawi
