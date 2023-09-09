@@ -17,7 +17,8 @@ from naive import NaivePopUp
 from knn import KNNPopUp
 from crawling import CrawlingFrame
 import nltk
-
+import Sastrawi
+print(Sastrawi.__file__)
 
 
 class DataInfoFrame(customtkinter.CTkFrame):
