@@ -46,7 +46,6 @@ class DataInfoFrame(customtkinter.CTkFrame):
     def __init__(self, master,header_name="Data Info",filename_var=None,k_var=None, listcolumn_var=None,filepath_var=None, datafile_var=None, **kwargs):
         super().__init__(master, **kwargs)
         self.header_name = header_name
-        # nltk.download('stopwords')
         # frame
         self.button_frame = customtkinter.CTkFrame(self)
         self.data=customtkinter.CTkFrame(self)
