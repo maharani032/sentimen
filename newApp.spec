@@ -8,7 +8,7 @@ a = Analysis(
     ['newApp.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\Mahar\\AppData\\Roaming\\Python\\Python311\\site-packages\\Sastrawi','Sastrawi')],
+    datas=[('Sastrawi','Sastrawi')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

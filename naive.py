@@ -3,7 +3,7 @@ import customtkinter
 import pandas as pd
 from sklearn import metrics
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
-from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.naive_bayes import MultinomialNB
 import seaborn as sn
 import matplotlib.pyplot as plt
@@ -58,16 +58,21 @@ class NaivePopUp(customtkinter.CTkToplevel):
         print(jenislabel)
         X = text_bow.toarray()
         Y=df[label]
-        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y, random_state=30)
+        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y,random_state=32)
         modelNB = MultinomialNB().fit(X_train,y_train)
-        scores = cross_val_score(modelNB, X_train, y_train, cv=5,scoring='accuracy')
-        precision_scores = cross_val_score(modelNB, X_train, y_train, cv=5, scoring='precision_weighted')
-        recall_scores = cross_val_score(modelNB, X_train, y_train, cv=5, scoring='recall_weighted')
-        scores_df = pd.DataFrame(scores, columns=['Accuracy'])
+
+        # scores_df = pd.DataFrame(scores, columns=['Accuracy'])
 
         y_pred=modelNB.predict(X_test)
+
+        kf = KFold(n_splits=5)
+        # scores = cross_val_score(nb_classifier, X_train_tfidf, y_train, cv=kf)
+        scores = cross_val_score(modelNB, X_train, y_train, cv=kf,scoring='accuracy')
+        precision_scores = cross_val_score(modelNB, X_train, y_train, cv=kf, scoring='precision_weighted')
+        recall_scores = cross_val_score(modelNB, X_train, y_train, cv=kf, scoring='recall_weighted')
         scores1=metrics.accuracy_score(y_test, y_pred)
 
+        # membuka bow_transformer
         X_test_text = bow_transformer.inverse_transform(X_test)
         # konversi data X_test_text ke dalam format data frame
         X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
