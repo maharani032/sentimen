@@ -1,4 +1,4 @@
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 import customtkinter
 import pandas as pd
 from sklearn import metrics
@@ -28,9 +28,9 @@ class NaivePopUp(customtkinter.CTkToplevel):
         self.presisinbc=customtkinter.StringVar()
         self.recallnbc=customtkinter.StringVar()
 
-        tweet=self.tweet.get().strip()
-        clean=self.ctweet.get().strip()
-        label=self.label.get().strip()
+        tweet=self.tweet.get()
+        clean=self.ctweet.get()
+        label=self.label.get()
 
         excel_filename = r"{}".format(self.filepath.get())
         if excel_filename[-4:] == ".csv":
@@ -58,8 +58,11 @@ class NaivePopUp(customtkinter.CTkToplevel):
         print(jenislabel)
         X = text_bow.toarray()
         Y=df[label]
-        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y,random_state=32)
-        modelNB = MultinomialNB().fit(X_train,y_train)
+        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,random_state=32)
+        
+        alpha = 1.0  # parameter  Laplacian Smoothing, adalah teknik yang digunakan dalam algoritma Naive Bayes untuk menghindari probabilitas nol. membantu meningkatkan kinerja algoritma dan mengurangi overfitting.
+
+        modelNB = MultinomialNB(alpha=alpha).fit(X_train,y_train)
 
         # scores_df = pd.DataFrame(scores, columns=['Accuracy'])
 
@@ -78,25 +81,26 @@ class NaivePopUp(customtkinter.CTkToplevel):
         X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
 
         datatest=pd.DataFrame()
-        datatest['tweet']=X_test_df['clean tweet']
+        datatest['c tweet']=X_test_df['clean tweet']
         listarray=y_test.tolist()
         datatest['label']=listarray
         datatest['prediksi']=y_pred
-
-        print(datatest)
-        # cross_val_pred = cross_val_predict(modelNB, X_train, y_train, cv=5)
-        # report = metrics.classification_report(y_train, cross_val_pred)
-        # report = metrics.classification_report(y_test, y_pred, target_names=['negatif', 'netral', 'positif'])
-
+        files = [
+                ("Excel file","*.xlsx"),
+                ("CSV file","*.csv")]
+        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
+        if(file is not None):
+            excel_filename = r"{}".format(file.name)
+            if excel_filename[-4:] == ".csv":
+                datatest.to_csv(file.name, index=False)
+            else:
+                datatest.to_excel(file.name, index=False)
 
         self.akurasi.set(str(scores.tolist()))
         self.akurasimean.set(str(scores.mean()))
         self.recallmean.set(str(recall_scores.mean()))
         self.presisimean.set(str(precision_scores.mean()))
-        # Layar
-        # print('Accuracy:', accuracy_score(y_test, y_pred))
-        # print('Precision:', precision_score(y_test, y_pred, average='weighted'))
-        # print('Recall:', recall_score(y_test, y_pred, average='weighted'))
+
         self.akurasinbc.set(str(metrics.accuracy_score(y_test,y_pred)))
         self.presisinbc.set(str(metrics.precision_score(y_test,y_pred, average='weighted')))
         self.recallnbc.set(str(metrics.recall_score(y_test,y_pred, average='weighted')))
@@ -170,7 +174,7 @@ class NaivePopUp(customtkinter.CTkToplevel):
         fig, ax = plt.subplots()
         fig = plt.figure(figsize=(4, 4))
         # plt.xlabel('Prediksi', fontsize=18)
-        ax = sn.heatmap(confm, cmap='Greens', annot=True)
+        ax = sn.heatmap(confm, cmap='Greens', annot=True, fmt='d')
         ax.set_title('Confusion matrix')
         ax.set_xlabel('Label prediksi')
         ax.set_ylabel('Label sebenarnya')

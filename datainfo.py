@@ -13,6 +13,7 @@ from tkinter import messagebox
 import os
 from tkinter import filedialog
 import numpy as np
+from banding import bandingPopUp
 from naive import NaivePopUp
 from knn import KNNPopUp
 from crawling import CrawlingFrame
@@ -76,6 +77,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
         self.crawling_popup=None        
         self.naive_popup=None
         self.knn_popup=None
+        self.banding_popup=None
 
         
         self.label_filepath=customtkinter.CTkLabel(self,text='File path:')
@@ -143,6 +145,21 @@ class DataInfoFrame(customtkinter.CTkFrame):
                                                 ,width=100,corner_radius=10,
                                                 command=self.knn)
         self.button_knn.grid(row=11,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+        self.button_perbandingan=customtkinter.CTkButton(master=self,text="Perbanding KNN & Naive Bayes"
+                                                ,width=100,corner_radius=10,
+                                                command=self.banding)
+        self.button_perbandingan.grid(row=12,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+
+    def banding(self):
+        if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="":
+            return messagebox.showinfo("Information","Data kosong")
+        if self.banding_popup is None or not self.banding_popup.winfo_exists():
+            self.banding_popup = bandingPopUp(self,cleantweet_var=self.cleantweet
+                                          ,tweet_var=self.tweet,label_var=self.datalabel,
+                                            filepath_var=self.filepath) # create window if its None or destroyed
+            self.banding_popup.title("Klasifikasi Naive Bayes") 
+        else:
+            self.banding_popup.focus()
     
     def crawlingData(self):
         if self.crawling_popup is None or not self.crawling_popup.winfo_exists():
@@ -205,13 +222,16 @@ class DataInfoFrame(customtkinter.CTkFrame):
     #     tokenize tweets
         tokenizer=TweetTokenizer(preserve_case=False,strip_handles=True,reduce_len=True)
         tweet_token=tokenizer.tokenize(tweet)
-        
+        tokenizer=tweet_token
         tweet_clean=[]
+        stopwords=[]
+
         for word in tweet_token:
             if(word not in stopword):
+                stopwords.append(word)
                 stem_word=stemmer.stem(word)
                 tweet_clean.append(stem_word)
-        return  tweet_clean
+        return  tokenizer,stopwords,tweet_clean
     
     def jointweet(self,tweet):
         return " ".join(tweet)
@@ -237,21 +257,14 @@ class DataInfoFrame(customtkinter.CTkFrame):
             df = pd.read_csv(excel_filename)
         else:
             df = pd.read_excel(excel_filename)
-        label=label.strip()
-        tweet=tweet.strip()
         self.preprocessing_pop_up=customtkinter.CTkToplevel(self)
         self.preprocessing_pop_up.title("Do not close")
         self.textlabel=customtkinter.CTkLabel(self.preprocessing_pop_up,text="Do not close",width=300,font=customtkinter.CTkFont(weight='bold',size=15))
         self.textlabel.grid(row=0,column=0,sticky='nesw',padx=10,pady=10)
         self.preprocessing_pop_up.focus()
-        if df[label].dtype == 'int64' or df[label].dtype == 'float64':
-        # Change Label
-            print("The 'label' column contains numerical data.")
-            label_dict = {0: 'netral', 1: 'positif', -1: 'negatif'}
-            df[label] = df[label].replace(label_dict)
-        else:
-            label_dict = {'Netral': 'netral', 'Positif': 'positif', 'Negatif': 'negatif'}
-            df[label] = df[label].replace(label_dict)
+        
+        label_dict = {'Netral': 'netral', 'Positif': 'positif', 'Negatif': 'negatif'}
+        df[label] = df[label].replace(label_dict)
 
         if (df[label].count()!= df[tweet].count()):
             self.button_crawling.configure(state='normal')
@@ -260,14 +273,16 @@ class DataInfoFrame(customtkinter.CTkFrame):
             self.button_knn.configure(state='normal')
             return messagebox.showerror("Information", "panjang data tidak sesuai")
 
-        df['remove_mention']=np.vectorize(self.remove_mention)(df[tweet]," *RT* | *@[\w]*")
+        df['case_folding']=df[tweet].apply(lambda x:self.case_folding(x))
+        df['remove_mention']=np.vectorize(self.remove_mention)(df['case_folding']," *RT* | *@[\w]*")
         df['remove_http']=df['remove_mention'].apply(lambda x:self.remove_http(x))
         df['remove_hastag']=df['remove_http'].apply(lambda x:self.removeHastag(x))
-        df['case_folding']=df['remove_hastag'].apply(lambda x:self.case_folding(x))
-
-        df['tokenizer']= df['case_folding'].apply(lambda x:asyncio.run(self.clean_tweets(x)))
-        df['cleantweet']=df['tokenizer'].apply(lambda x:self.jointweet(x))
-        print(df['tokenizer'])
+        
+        df['tokenizing'],df['stopwords'], df['stemming'] = zip(*df['remove_hastag'].apply(lambda x:asyncio.run(self.clean_tweets(x))))
+        # df['tokenizer']= df['case_folding'].apply(lambda x:asyncio.run(self.clean_tweets(x)))
+        
+        df['cleantweet']=df['stemming'].apply(lambda x:self.jointweet(x))
+        
         print(df['cleantweet'])
 
         self.button_crawling.configure(state='normal')
@@ -289,15 +304,6 @@ class DataInfoFrame(customtkinter.CTkFrame):
                 df.to_csv(file.name, index=False)
             else:
                 df.to_excel(file.name, index=False)
-            
-            # self.filepath.set(file.name)
-            # self.filename.set(os.path.basename(file.name))
-            # jumlah_per_kolom = df.count()
-            # self.datafile.set(' '.join([f'{kolom}: {jumlah_per_kolom[kolom]} ' for kolom in jumlah_per_kolom.index]))
-            # list_kolom = df.columns.to_list()
-            # string_kolom = ', '.join(list_kolom)
-            # self.listcolumn.set(string_kolom)
-
 
     def naivebayes(self):
         if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="":

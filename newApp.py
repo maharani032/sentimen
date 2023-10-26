@@ -33,7 +33,7 @@ class App(customtkinter.CTk):
             self.filename.set(os.path.basename(filename))        
             self.datafile.set(' '.join([f'{kolom}: {jumlah_per_kolom[kolom]} ' for kolom in jumlah_per_kolom.index]))
             list_kolom = data.columns.to_list()
-            string_kolom = ', '.join(list_kolom)
+            string_kolom = ','.join(list_kolom)
             self.listcolumn.set(string_kolom)
 
         except ValueError:
@@ -84,9 +84,6 @@ class App(customtkinter.CTk):
                                      ,datafile_var=self.datafile,listcolumn_var=self.listcolumn)
         self.data_info.grid(row=0,column=0,padx=10,pady=10,sticky='nsew')
         # self.data_info.place()
-
-        
-
         self.data_tabel=tableFrame(master=self,header_name="Data",filepath_var=self.filepath)
         self.data_tabel.grid(row=0,column=1,padx=10,pady=10,sticky='NSEW')
         

@@ -1,4 +1,4 @@
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 import customtkinter
 import pandas as pd
 from sklearn import metrics
@@ -29,10 +29,10 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.akurasiknn=customtkinter.StringVar()
         self.presisiknn=customtkinter.StringVar()
         self.recallknn=customtkinter.StringVar()
-        k=self.k.get().strip()
-        tweet=self.tweet.get().strip()
-        clean=self.ctweet.get().strip()
-        label=self.label.get().strip()
+        k=self.k.get()
+        tweet=self.tweet.get()
+        clean=self.ctweet.get()
+        label=self.label.get()
 
         excel_filename = r"{}".format(self.filepath.get())
         if excel_filename[-4:] == ".csv":
@@ -45,41 +45,45 @@ class KNNPopUp(customtkinter.CTkToplevel):
 
         df = df.dropna(subset=[label]).reset_index(drop=True)
         # hitung term frequency (tf) dari data teks
-        bow_transformer = CountVectorizer().fit(df[clean])
-        tokens = bow_transformer.get_feature_names_out()
-        text_bow = bow_transformer.transform(df[clean])
-        data = pd.DataFrame(text_bow.toarray(), columns=tokens)
-
-        # # # Menghitung jumlah kemunculan term pada dokumen
-        jumlah_kemunculan_term = data.sum()
-
-        tfidf_transformer=TfidfTransformer().fit(text_bow)
-        tweet_tfidf=tfidf_transformer.transform(text_bow)
-
-        jenislabel=df[label].unique()
-        print(jenislabel)
-        X = text_bow.toarray()
-        Y=df[label]
-        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,stratify=Y
+        
+        X_train, X_test, y_train, y_test = train_test_split(df[clean],df[label] , test_size=0.2
                                                             , random_state=32)
-        modelKNN = KNeighborsClassifier(n_neighbors=int(k)).fit(X_train,y_train)
-        y_pred=modelKNN.predict(X_test)
+        # Langkah 3: Ekstraksi Fitur
+        vectorizer = CountVectorizer()
+        X_train_vec = vectorizer.fit_transform(X_train)
+        X_test_vec = vectorizer.transform(X_test)
+        tfidf_transformer = TfidfTransformer()
+        X_train_tfidf = tfidf_transformer.fit_transform(X_train_vec )
+        X_test_tfidf = tfidf_transformer.transform(X_test_vec)
+        modelKNN = KNeighborsClassifier(n_neighbors=int(k)).fit(X_train_tfidf,y_train)
+        y_pred=modelKNN.predict(X_test_tfidf)
         
         kf = KFold(n_splits=5)
-        scores = cross_val_score(modelKNN, X_train, y_train, cv=kf,scoring='accuracy')
-        precision_scores = cross_val_score(modelKNN, X_train, y_train, cv=kf, scoring='precision_weighted')
-        recall_scores = cross_val_score(modelKNN, X_train, y_train, cv=kf, scoring='recall_weighted')
+        scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
+        precision_scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
+        recall_scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
         
 
-        X_test_text = bow_transformer.inverse_transform(X_test)
+        # X_test_text = bow_transformer.inverse_transform(X_test)
         # konversi data X_test_text ke dalam format data frame
-        X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
+        # X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
 
         datatest=pd.DataFrame()
-        datatest['tweet']=X_test_df['clean tweet']
+        datatest['tweet']=X_test
         listarray=y_test.tolist()
         datatest['label']=listarray
         datatest['prediksi']=y_pred
+        files = [
+                ("Excel file","*.xlsx"),
+                ("CSV file","*.csv")]
+        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
+        if(file is not None):
+            excel_filename = r"{}".format(file.name)
+            if excel_filename[-4:] == ".csv":
+                datatest.to_csv(file.name, index=False)
+            else:
+                datatest.to_excel(file.name, index=False)
+        print(datatest)
 
         self.kolomakurasi.set(str(scores.tolist()))
         self.akurasimean.set(str(scores.mean()))
@@ -156,7 +160,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         
         fig, ax = plt.subplots()
         fig = plt.figure(figsize=(4, 4))
-        ax = sn.heatmap(confm, cmap='Greens', annot=True)
+        ax = sn.heatmap(confm, cmap='Greens', annot=True, fmt='d')
         ax.set_title('Confusion matrix')
         ax.set_xlabel('Label prediksi')
         ax.set_ylabel('Label sebenarnya')
