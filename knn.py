@@ -1,7 +1,9 @@
 from tkinter import filedialog, messagebox, ttk
 import customtkinter
+import numpy as np
 import pandas as pd
 from sklearn import metrics
+from sklearn.calibration import cross_val_predict
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.naive_bayes import MultinomialNB
@@ -14,13 +16,15 @@ from sklearn.neighbors import KNeighborsClassifier
 
 
 class KNNPopUp(customtkinter.CTkToplevel):
-    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None,label_var=None, k_var=None):
+    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None,label_var=None, k_var=None,paramknn_var=None,kfold_var=None):
         super().__init__(master)
         self.filepath=filepath_var
         self.tweet=tweet_var
         self.ctweet=cleantweet_var
         self.label=label_var
         self.k=k_var
+        self.kfold=kfold_var
+        self.paramknn=paramknn_var
 
         self.kolomakurasi=customtkinter.StringVar()
         self.presisimean=customtkinter.StringVar()
@@ -29,11 +33,14 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.akurasiknn=customtkinter.StringVar()
         self.presisiknn=customtkinter.StringVar()
         self.recallknn=customtkinter.StringVar()
+
         k=self.k.get()
         tweet=self.tweet.get()
         clean=self.ctweet.get()
         label=self.label.get()
-
+        kfold=self.kfold.get()
+        params=self.paramknn.get()
+        print(params)
         excel_filename = r"{}".format(self.filepath.get())
         if excel_filename[-4:] == ".csv":
             df = pd.read_csv(excel_filename)
@@ -48,6 +55,16 @@ class KNNPopUp(customtkinter.CTkToplevel):
         
         X_train, X_test, y_train, y_test = train_test_split(df[clean],df[label] , test_size=0.2
                                                             , random_state=32)
+        df_train= pd.DataFrame()
+        df_train['text'] = X_train
+        df_train['label'] = y_train
+        df_train['jenis']='latihan'
+
+        df_test = pd.DataFrame()
+        df_test['text'] = X_test
+        df_test['label'] = y_test
+        df_test['jenis']='test'
+
         # Langkah 3: Ekstraksi Fitur
         vectorizer = CountVectorizer()
         X_train_vec = vectorizer.fit_transform(X_train)
@@ -55,44 +72,36 @@ class KNNPopUp(customtkinter.CTkToplevel):
         tfidf_transformer = TfidfTransformer()
         X_train_tfidf = tfidf_transformer.fit_transform(X_train_vec )
         X_test_tfidf = tfidf_transformer.transform(X_test_vec)
-        modelKNN = KNeighborsClassifier(n_neighbors=int(k)).fit(X_train_tfidf,y_train)
-        y_pred=modelKNN.predict(X_test_tfidf)
+        if params=='Euclidean Distance':
+            modelKNN = KNeighborsClassifier(n_neighbors=int(k), metric='euclidean')
+        elif params=='Manhattan Distance':
+            modelKNN = KNeighborsClassifier(n_neighbors=int(k),metric='manhattan')
+        elif params=='Minkowski Distance':
+            modelKNN = KNeighborsClassifier(n_neighbors=int(k),metric='minkowski')
+        knn=modelKNN.fit(X_train_tfidf,y_train)
+        kf = KFold(n_splits=int(kfold))
+        y_pred=knn.predict(X_test_tfidf)
         
-        kf = KFold(n_splits=5)
-        scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
-        precision_scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
-        recall_scores = cross_val_score(modelKNN, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
+        scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
+        precision_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
+        recall_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
+        
+        predicted_labels = cross_val_predict(knn, X_train_tfidf, y_train, cv=kf)
+        
+        y_pred=knn.predict(X_test_tfidf)
+        df_train['prediksi']=predicted_labels
+        df_test['prediksi']=y_pred
+        df_combined = pd.concat([df_train, df_test], ignore_index=False)
         
 
-        # X_test_text = bow_transformer.inverse_transform(X_test)
-        # konversi data X_test_text ke dalam format data frame
-        # X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
+        self.kolomakurasi.set(str(scores))
+        mean_score = np.array(scores).mean()  # Convert to numpy array and calculate mean
 
-        datatest=pd.DataFrame()
-        datatest['tweet']=X_test
-        listarray=y_test.tolist()
-        datatest['label']=listarray
-        datatest['prediksi']=y_pred
-        files = [
-                ("Excel file","*.xlsx"),
-                ("CSV file","*.csv")]
-        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
-        if(file is not None):
-            excel_filename = r"{}".format(file.name)
-            if excel_filename[-4:] == ".csv":
-                datatest.to_csv(file.name, index=False)
-            else:
-                datatest.to_excel(file.name, index=False)
-        print(datatest)
-
-        self.kolomakurasi.set(str(scores.tolist()))
-        self.akurasimean.set(str(scores.mean()))
+        self.akurasimean.set(str(mean_score))
         self.recallmean.set(str(recall_scores.mean()))
         self.presisimean.set(str(precision_scores.mean()))
         # Layar
-        # print('Accuracy:', accuracy_score(y_test, y_pred))
-        # print('Precision:', precision_score(y_test, y_pred, average='weighted'))
-        # print('Recall:', recall_score(y_test, y_pred, average='weighted'))
+        
         self.akurasiknn.set(str(metrics.accuracy_score(y_test,y_pred)))
         self.presisiknn.set(str(metrics.precision_score(y_test,y_pred, average='weighted')))
         self.recallknn.set(str(metrics.recall_score(y_test,y_pred, average='weighted')))
@@ -114,7 +123,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.label_akurasi = customtkinter.CTkLabel(self.dataframe, text='Akurasi dengan K-Fold Cross Validation:')
         self.label_akurasi.grid(row=1,column=0,padx=10,pady=4,sticky='w')
         self.emptyakurasi=customtkinter.CTkEntry(self.dataframe,textvariable=self.kolomakurasi,width=200)
-        self.emptyakurasi.grid(row=1,column=1,pady=4,padx=4,sticky='w')
+        self.emptyakurasi.grid(row=1,column=0,pady=4,padx=4,sticky='w')
         self.emptyakurasi.configure(state= "disabled")
 
         self.label_meanaccuracy=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata akurasi k-fold:')
@@ -169,13 +178,13 @@ class KNNPopUp(customtkinter.CTkToplevel):
         canvas.get_tk_widget().grid(row=0,column=0,padx=10)
 
         self.tree=ttk.Treeview(self.tabel,selectmode='extended')
-        self.tree["column"] = list(datatest.columns)
+        self.tree["column"] = list(df_combined.columns)
         # self.tree["show"] = "headings"
         for column in self.tree["columns"]:
             self.tree.heading(column, text=column,anchor='w')
             self.tree.column(column,anchor='w',width=100,stretch=False)
 
-        df_rows = datatest.to_numpy().tolist() # turns the dataframe into a list of lists
+        df_rows = df_combined.to_numpy().tolist() # turns the dataframe into a list of lists
         for row in df_rows:
             self.tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
         hs=ttk.Scrollbar(self.tabel, orient="horizontal", command=self.tree.xview)
