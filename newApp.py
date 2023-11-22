@@ -1,4 +1,3 @@
-
 import os
 import tkinter
 from tkinter import filedialog
@@ -53,11 +52,7 @@ class App(customtkinter.CTk):
         height= self.winfo_screenheight()
         #setting tkinter window size
         self.geometry("%dx%d" % (width, height))
-        # self.geometry("720x480")
-        # window.attributes('-fullscreen', True)
 
-        # self.grid_rowconfigure(1, weight=1)
-        # self.columnconfigure(2, weight=1)
         self.filename = customtkinter.StringVar()
         self.filepath=customtkinter.StringVar()
         self.datafile=customtkinter.StringVar()
@@ -76,8 +71,6 @@ class App(customtkinter.CTk):
         self.config(menu=menubar)
         self.grid_columnconfigure(1, weight = 1)
         self.grid_rowconfigure(0, weight = 1)
-
-        # self.data_info=customtkinter.CTkFrame(master=self,height=200,width=300)
 
         self.data_info=DataInfoFrame(master=self,header_name="Data Info"
                                      ,filename_var=self.filename,filepath_var=self.filepath
