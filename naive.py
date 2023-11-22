@@ -1,5 +1,6 @@
 from tkinter import filedialog, messagebox, ttk
 import customtkinter
+import numpy as np
 import pandas as pd
 from sklearn import metrics
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
@@ -8,17 +9,22 @@ from sklearn.naive_bayes import MultinomialNB
 import seaborn as sn
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from sklearn.naive_bayes import ComplementNB
+from sklearn.model_selection import cross_val_predict
 
 
 
 
 class NaivePopUp(customtkinter.CTkToplevel):
-    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None,label_var=None):
+    def __init__(self,master,filepath_var=None,tweet_var=None,cleantweet_var=None
+                 ,label_var=None,nb_params=None,kfold_var=None):
         super().__init__(master)
         self.filepath=filepath_var
         self.tweet=tweet_var
         self.ctweet=cleantweet_var
         self.label=label_var
+        self.params=nb_params
+        self.kfolds=kfold_var
 
         self.akurasi=customtkinter.StringVar()
         self.presisimean=customtkinter.StringVar()
@@ -31,73 +37,60 @@ class NaivePopUp(customtkinter.CTkToplevel):
         tweet=self.tweet.get()
         clean=self.ctweet.get()
         label=self.label.get()
-
+        params=self.params.get()
+        kfold=self.kfolds.get()
+        print(params)
         excel_filename = r"{}".format(self.filepath.get())
         if excel_filename[-4:] == ".csv":
             df = pd.read_csv(excel_filename)
         else:
             df = pd.read_excel(excel_filename)
         if (df[label].count()!= df[tweet].count()):
+            print('tidak sama')
             messagebox.showerror("Information", "panjang data tidak sesuai")
             return self.destroy()
 
         df = df.dropna(subset=[label]).reset_index(drop=True)
-        # hitung term frequency (tf) dari data teks
-        bow_transformer = CountVectorizer().fit(df[clean])
-        tokens = bow_transformer.get_feature_names_out()
-        text_bow = bow_transformer.transform(df[clean])
-        data = pd.DataFrame(text_bow.toarray(), columns=tokens)
-
-        # # # Menghitung jumlah kemunculan term pada dokumen
-        jumlah_kemunculan_term = data.sum()
-
-        tfidf_transformer=TfidfTransformer().fit(text_bow)
-        tweet_tfidf=tfidf_transformer.transform(text_bow)
-
-        jenislabel=df[label].unique()
-        print(jenislabel)
-        X = text_bow.toarray()
-        Y=df[label]
-        X_train, X_test, y_train, y_test = train_test_split(X,Y , test_size=0.2,random_state=32)
         
-        alpha = 1.0  # parameter  Laplacian Smoothing, adalah teknik yang digunakan dalam algoritma Naive Bayes untuk menghindari probabilitas nol. membantu meningkatkan kinerja algoritma dan mengurangi overfitting.
+        X_train, X_test, y_train, y_test = train_test_split(df[clean],df[label], test_size=0.2,random_state=32)
+        df_train= pd.DataFrame()
+        df_train['text'] = X_train
+        df_train['label'] = y_train
+        df_train['jenis']='latihan'
 
-        modelNB = MultinomialNB(alpha=alpha).fit(X_train,y_train)
+        df_test = pd.DataFrame()
+        df_test['text'] = X_test
+        df_test['label'] = y_test
+        df_test['jenis']='test'
 
-        # scores_df = pd.DataFrame(scores, columns=['Accuracy'])
 
-        y_pred=modelNB.predict(X_test)
+        vectorizer = CountVectorizer()
+        train_X_tfidf = vectorizer.fit_transform(df_train['text'])
+        test_X_tfidf = vectorizer.transform(df_test['text'])
+        tfidf_transformer = TfidfTransformer()
+        train_X_tfidf = tfidf_transformer.fit_transform(train_X_tfidf )
+        test_X_tfidf = tfidf_transformer.transform(test_X_tfidf)
+        if params=='ComplementNB':
+            model_NB = ComplementNB() #inisialiasi library
+        elif params=='MultinomialNB':
+            model_NB=MultinomialNB()
 
-        kf = KFold(n_splits=5)
-        # scores = cross_val_score(nb_classifier, X_train_tfidf, y_train, cv=kf)
-        scores = cross_val_score(modelNB, X_train, y_train, cv=kf,scoring='accuracy')
-        precision_scores = cross_val_score(modelNB, X_train, y_train, cv=kf, scoring='precision_weighted')
-        recall_scores = cross_val_score(modelNB, X_train, y_train, cv=kf, scoring='recall_weighted')
-        scores1=metrics.accuracy_score(y_test, y_pred)
+        NB2 = model_NB.fit(train_X_tfidf,y_train) #melatih model menggunakan data pelatihan
+        kf = KFold(n_splits=int(kfold))
+        scores=cross_val_score(NB2, train_X_tfidf, y_train, cv=kf, scoring='accuracy')
+        precision_scores = cross_val_score(NB2, train_X_tfidf, y_train, cv=kf, scoring='precision_weighted')
+        recall_scores = cross_val_score(NB2, train_X_tfidf, y_train, cv=kf, scoring='recall_weighted')
+        predicted_labels = cross_val_predict(NB2, train_X_tfidf, y_train, cv=kf)
+        
+        y_pred=NB2.predict(test_X_tfidf)
+        df_train['prediksi']=predicted_labels
+        df_test['prediksi']=y_pred
+        df_combined = pd.concat([df_train, df_test], ignore_index=False)
 
-        # membuka bow_transformer
-        X_test_text = bow_transformer.inverse_transform(X_test)
-        # konversi data X_test_text ke dalam format data frame
-        X_test_df = pd.DataFrame({'clean tweet': [' '.join(tokens) for tokens in X_test_text]})
+        self.akurasi.set(str(scores))
+        mean_score = np.array(scores).mean()  # Convert to numpy array and calculate mean
 
-        datatest=pd.DataFrame()
-        datatest['c tweet']=X_test_df['clean tweet']
-        listarray=y_test.tolist()
-        datatest['label']=listarray
-        datatest['prediksi']=y_pred
-        files = [
-                ("Excel file","*.xlsx"),
-                ("CSV file","*.csv")]
-        file = filedialog.asksaveasfile(mode='w',filetypes = files, defaultextension = files)
-        if(file is not None):
-            excel_filename = r"{}".format(file.name)
-            if excel_filename[-4:] == ".csv":
-                datatest.to_csv(file.name, index=False)
-            else:
-                datatest.to_excel(file.name, index=False)
-
-        self.akurasi.set(str(scores.tolist()))
-        self.akurasimean.set(str(scores.mean()))
+        self.akurasimean.set(str(mean_score))
         self.recallmean.set(str(recall_scores.mean()))
         self.presisimean.set(str(precision_scores.mean()))
 
@@ -105,8 +98,6 @@ class NaivePopUp(customtkinter.CTkToplevel):
         self.presisinbc.set(str(metrics.precision_score(y_test,y_pred, average='weighted')))
         self.recallnbc.set(str(metrics.recall_score(y_test,y_pred, average='weighted')))
         
-        # self.grid_columnconfigure(2, weight = 2)
-        # self.grid_columnconfigure(1, weight = 1)
         self.grid_rowconfigure(0, weight = 1)
         self.grid_rowconfigure(1, weight = 1)
 
@@ -183,13 +174,13 @@ class NaivePopUp(customtkinter.CTkToplevel):
         canvas.get_tk_widget().grid(row=0,column=0,padx=10)
 
         self.tree=ttk.Treeview(self.tabel,selectmode='extended')
-        self.tree["column"] = list(datatest.columns)
+        self.tree["column"] = list(df_combined.columns)
         # self.tree["show"] = "headings"
         for column in self.tree["columns"]:
             self.tree.heading(column, text=column,anchor='w')
             self.tree.column(column,anchor='w',width=100,stretch=False)
 
-        df_rows = datatest.to_numpy().tolist() # turns the dataframe into a list of lists
+        df_rows = df_combined.to_numpy().tolist() # turns the dataframe into a list of lists
         for row in df_rows:
             self.tree.insert("", "end", values=row) # inserts each list into the treeview. For parameters see https://docs.python.org/3/library/tkinter.ttk.html#tkinter.ttk.Treeview.insert
         hs=ttk.Scrollbar(self.tabel, orient="horizontal", command=self.tree.xview)
