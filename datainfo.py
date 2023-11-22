@@ -1,5 +1,6 @@
 import re
 import threading
+import tkinter
 import customtkinter
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
@@ -41,7 +42,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
 
         self_entry_databersih = self.children['!ctkcombobox3']
         self_entry_databersih.configure(values=self.list_column)
-    def is_numeric(char):
+    def is_numeric(self,char):
         return char.isdigit()
     
     def __init__(self, master,header_name="Data Info",filename_var=None,k_var=None, listcolumn_var=None,filepath_var=None, datafile_var=None, **kwargs):
@@ -66,13 +67,21 @@ class DataInfoFrame(customtkinter.CTkFrame):
         self.cleantweet=customtkinter.StringVar(value='')
         self.listcolumn=customtkinter.StringVar()
         self.k=customtkinter.StringVar()
-
-        
+        self.kfold=customtkinter.StringVar()
+        self.params_nb=customtkinter.StringVar(value='MultinomialNB')
+        self.params_knn=customtkinter.StringVar(value= 'Euclidean Distance')
         self.datatweet.trace_add('write', self.update_list_column)
-        # self.datalabel.trace_add("write",self.send_string_var_to_main)
         
         self.list_column = [""]
-        
+        self.list_naive=[
+            'MultinomialNB',
+            'ComplementNB'
+        ]
+        self.list_knn=[
+            'Euclidean Distance',
+            'Manhattan Distance',
+            'Minkowski Distance'
+        ]
 
         self.crawling_popup=None        
         self.naive_popup=None
@@ -120,35 +129,52 @@ class DataInfoFrame(customtkinter.CTkFrame):
         self_entry_databersih.grid(row=6, column=1,pady=4)
         self_entry_databersih.configure(state='readonly')
 
-        self_label_k=customtkinter.CTkLabel(self,text='K:')
-        self_label_k.grid(row=7, column=0 ,padx=10 ,pady=4,sticky='w')
-        entry_k = customtkinter.CTkEntry(self,textvariable=self.k,width=200,validate="key", validatecommand=(validation, '%S'))
-        entry_k.grid(row=7, column=1,pady=4,padx=10,sticky='w')
+        self_label_kfold=customtkinter.CTkLabel(self,text='K Fold:')
+        self_label_kfold.grid(row=7, column=0 ,padx=10 ,pady=4,sticky='w')
+        entry_kfold = customtkinter.CTkEntry(self,textvariable=self.kfold,width=200,validate="key", validatecommand=(validation, '%S'))
+        entry_kfold.grid(row=7, column=1,pady=4,padx=10,sticky='w')
 
+        self_label_k=customtkinter.CTkLabel(self,text='K pada KNN:')
+        self_label_k.grid(row=8, column=0 ,padx=10 ,pady=4,sticky='w')
+        entry_k = customtkinter.CTkEntry(self,textvariable=self.k,width=200,validate="key", validatecommand=(validation, '%S'))
+        entry_k.grid(row=8, column=1,pady=4,padx=10,sticky='w')
+
+       
+        self_label_params_nb=customtkinter.CTkLabel(self,text='Parameter Naive:')
+        self_label_params_nb.grid(row=9, column=0  ,padx=10,pady=4,sticky='w')
+        self_entry_params_nb =  customtkinter.CTkComboBox(self,width=200,variable=self.params_nb,values=self.list_naive)
+        self_entry_params_nb.grid(row=9, column=1,pady=4)
+        self_entry_params_nb.configure(state='readonly')
+
+        self_label_params_knn=customtkinter.CTkLabel(self,text='Jarak KNN:')
+        self_label_params_knn.grid(row=10, column=0  ,padx=10,pady=4,sticky='w')
+        self_entry_params_knn =  customtkinter.CTkComboBox(self,width=200,variable=self.params_knn,values=self.list_knn)
+        self_entry_params_knn.grid(row=10, column=1,pady=4)
+        self_entry_params_knn.configure(state='readonly')
 
         
         self.button_crawling=customtkinter.CTkButton(master=self,text="Crawling"
                                                      ,width=100,corner_radius=10,
                                                      command=self.crawlingData)
-        self.button_crawling.grid(row=8,column=0,sticky='nwse',padx=20,pady=4,columnspan=2)
+        self.button_crawling.grid(row=11,column=0,sticky='nwse',padx=20,pady=4,columnspan=2)
         self.button_preprocessing=customtkinter.CTkButton(master=self,text="Preprocessing",
                                                           width=100,corner_radius=10,
                                                         #   command=self.preprocessing)
                                                           
         command=lambda:threading.Thread(target=self.preprocessing).start())
-        self.button_preprocessing.grid(row=9,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+        self.button_preprocessing.grid(row=12,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
         self.button_naive=customtkinter.CTkButton(master=self,text="Klasifikasi Naive Bayes"
                                                   ,width=100,corner_radius=10,
                                                   command=self.naivebayes)
-        self.button_naive.grid(row=10,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+        self.button_naive.grid(row=13,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
         self.button_knn=customtkinter.CTkButton(master=self,text="Klasifikasi K-Nearest Neighbors"
                                                 ,width=100,corner_radius=10,
                                                 command=self.knn)
-        self.button_knn.grid(row=11,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+        self.button_knn.grid(row=14,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
         self.button_perbandingan=customtkinter.CTkButton(master=self,text="Perbanding KNN & Naive Bayes"
                                                 ,width=100,corner_radius=10,
                                                 command=self.banding)
-        self.button_perbandingan.grid(row=12,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
+        # self.button_perbandingan.grid(row=12,column=0,sticky='nwse',padx=20,pady=2,columnspan=2)
 
     def banding(self):
         if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="":
@@ -213,7 +239,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
         ,'ges','yee','lahhh','ntah','fess','lol','ckckckck','jiakhhh','twitt','bahahaaha','hahahahaha','guys','teh','cmiiw','tweet','kwkwkwkwkw'
         ,'yahhh'
         ]
-        stopword=stop_factory+more_stopword+stopwords_indonesia
+        stopword=stop_factory+stopwords_indonesia+more_stopword
         dictionary=ArrayDictionary(stopword)
         str=StopWordRemover(dictionary)
 
@@ -235,8 +261,22 @@ class DataInfoFrame(customtkinter.CTkFrame):
     
     def jointweet(self,tweet):
         return " ".join(tweet)
-    
+    def preprocessing_onclose(self):
+        print(self.stop_signal)
+        quit = tkinter.messagebox.askokcancel(title="Peringatan", message= "Apa anda yakin?")
+        if quit:
+            self.button_crawling.configure(state='normal')
+            self.button_preprocessing.configure(state='normal')
+            self.button_naive.configure(state='normal')
+            self.button_knn.configure(state='normal')
+            self.preprocessing_pop_up.destroy()
+            self.stop_signal.set()
+            print(self.stop_signal)
+              # Set the stop signal to stop the thread
+
     def preprocessing(self):
+        self.stop_signal = threading.Event()
+        print(self.stop_signal)
         self.button_crawling.configure(state='disabled')
         self.button_preprocessing.configure(state='disabled')
         self.button_naive.configure(state='disabled')
@@ -262,37 +302,37 @@ class DataInfoFrame(customtkinter.CTkFrame):
         self.textlabel=customtkinter.CTkLabel(self.preprocessing_pop_up,text="Do not close",width=300,font=customtkinter.CTkFont(weight='bold',size=15))
         self.textlabel.grid(row=0,column=0,sticky='nesw',padx=10,pady=10)
         self.preprocessing_pop_up.focus()
-        
-        label_dict = {'Netral': 'netral', 'Positif': 'positif', 'Negatif': 'negatif'}
-        df[label] = df[label].replace(label_dict)
-
-        if (df[label].count()!= df[tweet].count()):
-            self.button_crawling.configure(state='normal')
-            self.button_preprocessing.configure(state='normal')
-            self.button_naive.configure(state='normal')
-            self.button_knn.configure(state='normal')
-            return messagebox.showerror("Information", "panjang data tidak sesuai")
+        try:
+            if df[label].empty or df[tweet].empty or (df[label].count() != df[tweet].count()):
+                self.button_crawling.configure(state='normal')
+                self.button_preprocessing.configure(state='normal')
+                self.button_naive.configure(state='normal')
+                self.button_knn.configure(state='normal')
+                raise ValueError("Panjang data tidak sesuai")
+        except ValueError as e:
+            messagebox.showerror("Information", str(e))
 
         df['case_folding']=df[tweet].apply(lambda x:self.case_folding(x))
         df['remove_mention']=np.vectorize(self.remove_mention)(df['case_folding']," *RT* | *@[\w]*")
         df['remove_http']=df['remove_mention'].apply(lambda x:self.remove_http(x))
         df['remove_hastag']=df['remove_http'].apply(lambda x:self.removeHastag(x))
-        
+        # self.preprocessing_pop_up.protocol("WM_DELETE_WINDOW", self.preprocessing_onclose())
+        self.preprocessing_pop_up.protocol("WM_DELETE_WINDOW", self.preprocessing_onclose)
+
         df['tokenizing'],df['stopwords'], df['stemming'] = zip(*df['remove_hastag'].apply(lambda x:asyncio.run(self.clean_tweets(x))))
         # df['tokenizer']= df['case_folding'].apply(lambda x:asyncio.run(self.clean_tweets(x)))
         
         df['cleantweet']=df['stemming'].apply(lambda x:self.jointweet(x))
         
-        print(df['cleantweet'])
-
+        df.drop_duplicates(subset='cleantweet',keep='first',inplace=True)
+        df.dropna()
+        
         self.button_crawling.configure(state='normal')
         self.button_preprocessing.configure(state='normal')
         self.button_naive.configure(state='normal')
         self.button_knn.configure(state='normal')
         self.preprocessing_pop_up.destroy()
-        
-        df.drop_duplicates(subset='cleantweet',keep='first',inplace=True)
-        df.dropna(subset='cleantweet', inplace=True)
+       
         # Save File
         files = [
                 ("Excel file","*.xlsx"),
@@ -306,24 +346,24 @@ class DataInfoFrame(customtkinter.CTkFrame):
                 df.to_excel(file.name, index=False)
 
     def naivebayes(self):
-        if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="":
+        if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="" or self.kfold.get()=="":
             return messagebox.showinfo("Information","Data kosong")
         if self.naive_popup is None or not self.naive_popup.winfo_exists():
             self.naive_popup = NaivePopUp(self,cleantweet_var=self.cleantweet
                                           ,tweet_var=self.tweet,label_var=self.datalabel,
-                                            filepath_var=self.filepath) # create window if its None or destroyed
+                                            filepath_var=self.filepath,nb_params=self.params_nb,kfold_var=self.kfold) # create window if its None or destroyed
             self.naive_popup.title("Klasifikasi Naive Bayes") 
         else:
             self.naive_popup.focus()
     
     def knn(self):
-        if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="" or self.k.get()=="":
+        if self.datalabel.get()=="" or self.tweet.get()=="" or self.cleantweet.get()=="" or self.k.get()=="" or self.kfold.get()=="":
             return messagebox.showinfo("Information","Data kosong")
         if self.knn_popup is None or not self.knn_popup.winfo_exists():
             print(self.k.get())
             self.knn_popup = KNNPopUp(self,cleantweet_var=self.cleantweet
                                           ,tweet_var=self.tweet,label_var=self.datalabel,
-                                            filepath_var=self.filepath,k_var=self.k) # create window if its None or destroyed
+                                            filepath_var=self.filepath,k_var=self.k,kfold_var=self.kfold,paramknn_var=self.params_knn) # create window if its None or destroyed
             self.knn_popup.title(" Klasifikasi  K-Nearest Neighbors") 
         else:
             self.knn_popup.focus()
