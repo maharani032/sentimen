@@ -6,7 +6,6 @@ from sklearn import metrics
 from sklearn.calibration import cross_val_predict
 from sklearn.feature_extraction.text import CountVectorizer,TfidfTransformer
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
-from sklearn.naive_bayes import MultinomialNB
 import seaborn as sn
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -74,21 +73,34 @@ class KNNPopUp(customtkinter.CTkToplevel):
         X_test_tfidf = tfidf_transformer.transform(X_test_vec)
         if params=='Euclidean Distance':
             modelKNN = KNeighborsClassifier(n_neighbors=int(k), metric='euclidean')
+            knn=modelKNN.fit(X_train_tfidf,y_train)
+            kf = KFold(n_splits=int(kfold))
+            y_pred=knn.predict(X_test_tfidf)
+            scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
+            precision_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
+            recall_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
+            predicted_labels = cross_val_predict(knn, X_train_tfidf, y_train, cv=kf)
         elif params=='Manhattan Distance':
             modelKNN = KNeighborsClassifier(n_neighbors=int(k),metric='manhattan')
+            knn=modelKNN.fit(X_train_tfidf,y_train)
+            kf = KFold(n_splits=int(kfold))
+            y_pred=knn.predict(X_test_tfidf)
+            scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
+            precision_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
+            recall_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
+            predicted_labels = cross_val_predict(knn, X_train_tfidf, y_train, cv=kf)
         elif params=='Minkowski Distance':
-            modelKNN = KNeighborsClassifier(n_neighbors=int(k),metric='minkowski')
-        knn=modelKNN.fit(X_train_tfidf,y_train)
-        kf = KFold(n_splits=int(kfold))
-        y_pred=knn.predict(X_test_tfidf)
+            modelKNN = KNeighborsClassifier(n_neighbors=int(k),p=3,metric='minkowski')
+            knn=modelKNN.fit(X_train,y_train)
+            kf = KFold(n_splits=int(kfold))
+            y_pred=knn.predict(X_test)
+            scores = cross_val_score(knn, X_train, y_train, cv=kf,scoring='accuracy')
+            precision_scores = cross_val_score(knn, X_train, y_train, cv=kf, scoring='precision_weighted')
+            recall_scores = cross_val_score(knn, X_train, y_train, cv=kf, scoring='recall_weighted')
+            predicted_labels = cross_val_predict(knn, X_train, y_train, cv=kf)
+            
         
-        scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf,scoring='accuracy')
-        precision_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='precision_weighted')
-        recall_scores = cross_val_score(knn, X_train_tfidf, y_train, cv=kf, scoring='recall_weighted')
         
-        predicted_labels = cross_val_predict(knn, X_train_tfidf, y_train, cv=kf)
-        
-        y_pred=knn.predict(X_test_tfidf)
         df_train['prediksi']=predicted_labels
         df_test['prediksi']=y_pred
         df_combined = pd.concat([df_train, df_test], ignore_index=False)
@@ -123,7 +135,7 @@ class KNNPopUp(customtkinter.CTkToplevel):
         self.label_akurasi = customtkinter.CTkLabel(self.dataframe, text='Akurasi dengan K-Fold Cross Validation:')
         self.label_akurasi.grid(row=1,column=0,padx=10,pady=4,sticky='w')
         self.emptyakurasi=customtkinter.CTkEntry(self.dataframe,textvariable=self.kolomakurasi,width=200)
-        self.emptyakurasi.grid(row=1,column=0,pady=4,padx=4,sticky='w')
+        self.emptyakurasi.grid(row=1,column=1,pady=4,padx=4,sticky='w')
         self.emptyakurasi.configure(state= "disabled")
 
         self.label_meanaccuracy=customtkinter.CTkLabel(self.dataframe, width=100,text='Rata-rata akurasi k-fold:')

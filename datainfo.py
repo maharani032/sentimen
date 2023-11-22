@@ -14,13 +14,13 @@ from tkinter import messagebox
 import os
 from tkinter import filedialog
 import numpy as np
+import nltk
+import Sastrawi
+print(Sastrawi.__file__)
 from banding import bandingPopUp
 from naive import NaivePopUp
 from knn import KNNPopUp
 from crawling import CrawlingFrame
-import nltk
-import Sastrawi
-print(Sastrawi.__file__)
 
 
 class DataInfoFrame(customtkinter.CTkFrame):
@@ -80,7 +80,7 @@ class DataInfoFrame(customtkinter.CTkFrame):
         self.list_knn=[
             'Euclidean Distance',
             'Manhattan Distance',
-            'Minkowski Distance'
+            # 'Minkowski Distance'
         ]
 
         self.crawling_popup=None        
